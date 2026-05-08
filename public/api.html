@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpineGuard — API Reference</title>
+<script src="/config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #07090f;
+  --bg2:       #0d1018;
+  --bg3:       #131720;
+  --bg4:       #1a1f2e;
+  --line:      rgba(255,255,255,0.06);
+  --line-hi:   rgba(255,255,255,0.12);
+  --text:      #d8dce8;
+  --muted:     #4a5268;
+  --bright:    #f0f2f8;
+  --green:     #00d97e;
+  --green-dim: rgba(0,217,126,0.1);
+  --red:       #ff4d6a;
+  --red-dim:   rgba(255,77,106,0.1);
+  --blue:      #3d9eff;
+  --blue-dim:  rgba(61,158,255,0.1);
+  --orange:    #ff8c42;
+  --orange-dim:rgba(255,140,66,0.1);
+  --purple:    #a78bfa;
+  --purple-dim:rgba(167,139,250,0.1);
+  --yellow:    #fbbf24;
+  --fm: 'IBM Plex Mono', monospace;
+  --fs: 'IBM Plex Sans', sans-serif;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+html { scroll-behavior:smooth; }
+
+body {
+  background:var(--bg); color:var(--text);
+  font-family:var(--fs);
+  display:flex; min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── Scanline texture ── */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);
+}
+
+/* ═══════════════════════════════════
+   SIDEBAR NAV
+═══════════════════════════════════ */
+.sidebar {
+  width:240px; flex-shrink:0; position:fixed; top:0; left:0; bottom:0;
+  background:var(--bg2); border-right:1px solid var(--line);
+  overflow-y:auto; z-index:10; padding:0 0 40px;
+  scrollbar-width:none;
+}
+.sidebar::-webkit-scrollbar { display:none; }
+
+.nav-header {
+  padding:22px 20px 16px; border-bottom:1px solid var(--line); margin-bottom:8px;
+}
+.nav-logo {
+  font-family:var(--fm); font-size:13px; font-weight:600;
+  letter-spacing:.12em; color:var(--bright); text-transform:uppercase;
+}
+.nav-logo span { color:var(--blue); }
+.nav-sub {
+  font-size:11px; color:var(--muted); margin-top:4px; letter-spacing:.04em;
+  font-family:var(--fm);
+}
+
+.nav-home {
+  display:flex; align-items:center; gap:8px;
+  margin:8px 12px; padding:8px 10px; border-radius:8px;
+  border:1px solid var(--line-hi); background:var(--bg3);
+  color:var(--blue); font-family:var(--fm); font-size:11px;
+  letter-spacing:.08em; text-decoration:none; transition:all .15s;
+  text-transform:uppercase;
+}
+.nav-home:hover { background:var(--blue-dim); }
+
+.nav-section-label {
+  font-size:9px; font-family:var(--fm); letter-spacing:.16em;
+  color:var(--muted); text-transform:uppercase; padding:12px 20px 4px;
+}
+
+.nav-item {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 20px; cursor:pointer; transition:all .15s;
+  border-left:2px solid transparent; text-decoration:none;
+}
+.nav-item:hover  { background:rgba(255,255,255,.03); }
+.nav-item.active { border-left-color:var(--blue); background:var(--blue-dim); }
+.nav-method {
+  font-family:var(--fm); font-size:9px; font-weight:600;
+  letter-spacing:.06em; min-width:38px; text-align:center;
+  padding:2px 5px; border-radius:4px;
+}
+.nav-path { font-family:var(--fm); font-size:11px; color:var(--muted); }
+.nav-item.active .nav-path { color:var(--blue); }
+
+.m-get    { background:var(--green-dim);  color:var(--green); }
+.m-post   { background:var(--orange-dim); color:var(--orange);}
+.m-patch  { background:var(--blue-dim);   color:var(--blue);  }
+.m-delete { background:var(--red-dim);    color:var(--red);   }
+
+/* ═══════════════════════════════════
+   MAIN CONTENT
+═══════════════════════════════════ */
+.main {
+  margin-left:240px; flex:1; padding:0;
+  position:relative; z-index:1;
+}
+
+.page-header {
+  padding:32px 48px 28px; border-bottom:1px solid var(--line);
+  display:flex; align-items:flex-end; justify-content:space-between;
+  gap:20px; position:sticky; top:0; background:var(--bg); z-index:5;
+  backdrop-filter:blur(12px);
+}
+.page-title { font-size:22px; font-weight:700; letter-spacing:.02em; color:var(--bright); }
+.page-title span { color:var(--blue); }
+.base-url-wrap {
+  display:flex; align-items:center; gap:8px;
+  background:var(--bg3); border:1px solid var(--line-hi);
+  border-radius:10px; padding:8px 14px;
+}
+.base-url-label { font-size:10px; font-family:var(--fm); color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }
+.base-url-input {
+  background:transparent; border:none; outline:none;
+  font-family:var(--fm); font-size:13px; color:var(--green);
+  width:240px;
+}
+
+.content { padding:32px 48px 80px; }
+
+/* ═══════════════════════════════════
+   SECTION HEADERS
+═══════════════════════════════════ */
+.resource-section { margin-bottom:64px; }
+.resource-title {
+  font-size:20px; font-weight:700; color:var(--bright); margin-bottom:6px;
+  display:flex; align-items:center; gap:12px;
+}
+.resource-icon { font-size:18px; }
+.resource-desc { font-size:13px; color:var(--muted); margin-bottom:24px; line-height:1.5; }
+
+/* ═══════════════════════════════════
+   ENDPOINT CARDS
+═══════════════════════════════════ */
+.endpoint {
+  background:var(--bg2); border:1px solid var(--line);
+  border-radius:14px; margin-bottom:14px; overflow:hidden;
+  transition:border-color .2s;
+}
+.endpoint:hover { border-color:var(--line-hi); }
+
+.endpoint-header {
+  display:flex; align-items:center; gap:12px; padding:14px 18px;
+  cursor:pointer; user-select:none;
+}
+.method-badge {
+  font-family:var(--fm); font-size:10px; font-weight:600;
+  letter-spacing:.08em; padding:4px 10px; border-radius:6px; min-width:56px;
+  text-align:center;
+}
+.endpoint-path {
+  font-family:var(--fm); font-size:13px; color:var(--bright); flex:1;
+}
+.endpoint-path .param { color:var(--orange); }
+.endpoint-summary { font-size:12px; color:var(--muted); margin-left:auto; }
+.chevron { color:var(--muted); font-size:11px; transition:transform .2s; margin-left:8px; }
+.endpoint.open .chevron { transform:rotate(180deg); }
+
+.endpoint-body {
+  display:none; border-top:1px solid var(--line);
+}
+.endpoint.open .endpoint-body { display:block; }
+
+.endpoint-tabs {
+  display:flex; border-bottom:1px solid var(--line);
+  padding:0 18px;
+}
+.etab {
+  font-size:11px; font-family:var(--fm); letter-spacing:.08em;
+  padding:10px 14px; color:var(--muted); cursor:pointer;
+  border-bottom:2px solid transparent; transition:all .15s;
+  text-transform:uppercase;
+}
+.etab.active { color:var(--blue); border-bottom-color:var(--blue); }
+.etab:hover:not(.active) { color:var(--text); }
+
+.tab-content { padding:18px; display:none; }
+.tab-content.active { display:block; }
+
+/* ── Code blocks ── */
+.code-block {
+  background:var(--bg); border:1px solid var(--line);
+  border-radius:10px; overflow:hidden; margin:8px 0;
+}
+.code-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 14px; border-bottom:1px solid var(--line);
+  background:var(--bg3);
+}
+.code-lang { font-family:var(--fm); font-size:10px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }
+.copy-btn {
+  font-family:var(--fm); font-size:10px; color:var(--muted);
+  background:none; border:1px solid var(--line); border-radius:5px;
+  padding:3px 9px; cursor:pointer; transition:all .15s; letter-spacing:.06em;
+}
+.copy-btn:hover { color:var(--text); border-color:var(--line-hi); }
+.copy-btn.copied { color:var(--green); border-color:rgba(0,217,126,.3); }
+
+pre {
+  padding:14px 16px; font-family:var(--fm); font-size:12px;
+  line-height:1.7; overflow-x:auto; color:var(--text);
+}
+pre .key    { color:var(--purple); }
+pre .str    { color:var(--green);  }
+pre .num    { color:var(--orange); }
+pre .bool   { color:var(--blue);   }
+pre .null   { color:var(--muted);  }
+pre .method { color:var(--yellow); }
+pre .url    { color:var(--green);  }
+pre .comment{ color:var(--muted); font-style:italic; }
+
+/* ── Field table ── */
+.fields-table { width:100%; border-collapse:collapse; font-size:12px; }
+.fields-table th {
+  text-align:left; font-family:var(--fm); font-size:9px; letter-spacing:.12em;
+  color:var(--muted); text-transform:uppercase; padding:6px 10px;
+  border-bottom:1px solid var(--line); font-weight:500;
+}
+.fields-table td { padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.03); vertical-align:top; }
+.fields-table tr:last-child td { border-bottom:none; }
+.field-name  { font-family:var(--fm); color:var(--purple); font-size:12px; }
+.field-type  { font-family:var(--fm); color:var(--orange); font-size:11px; }
+.field-req   { font-family:var(--fm); color:var(--red); font-size:11px; }
+.field-opt   { font-family:var(--fm); color:var(--muted); font-size:11px; }
+.field-desc  { color:var(--text); font-size:12px; line-height:1.5; }
+
+/* ── Try it panel ── */
+.try-it { padding:18px; }
+.try-label { font-size:10px; font-family:var(--fm); color:var(--muted); letter-spacing:.12em; text-transform:uppercase; margin-bottom:8px; }
+.try-input {
+  width:100%; background:var(--bg); border:1px solid var(--line-hi);
+  color:var(--text); font-family:var(--fm); font-size:12px;
+  padding:10px 12px; border-radius:8px; outline:none;
+  transition:border-color .2s; resize:vertical; min-height:80px;
+}
+.try-input:focus { border-color:var(--blue); }
+.try-row { display:flex; gap:8px; margin-bottom:12px; }
+.try-field {
+  flex:1; background:var(--bg); border:1px solid var(--line-hi);
+  color:var(--text); font-family:var(--fm); font-size:12px;
+  padding:9px 12px; border-radius:8px; outline:none; transition:border-color .2s;
+}
+.try-field:focus { border-color:var(--blue); }
+.try-field::placeholder { color:var(--muted); }
+.run-btn {
+  padding:9px 20px; border-radius:8px; border:none;
+  background:var(--blue); color:#fff; font-family:var(--fm);
+  font-size:11px; font-weight:600; letter-spacing:.08em;
+  cursor:pointer; transition:all .15s; text-transform:uppercase;
+  white-space:nowrap;
+}
+.run-btn:hover { filter:brightness(1.12); }
+.run-btn:active { transform:scale(.97); }
+.run-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+
+.try-response {
+  margin-top:12px; background:var(--bg); border:1px solid var(--line);
+  border-radius:8px; overflow:hidden; display:none;
+}
+.try-response.visible { display:block; }
+.response-status {
+  padding:7px 14px; font-family:var(--fm); font-size:11px;
+  display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--line);
+  background:var(--bg3);
+}
+.status-dot { width:6px; height:6px; border-radius:50%; }
+.status-ok  { background:var(--green); }
+.status-err { background:var(--red); }
+.response-body { padding:12px; font-family:var(--fm); font-size:11px; line-height:1.6; color:var(--text); max-height:280px; overflow-y:auto; white-space:pre-wrap; word-break:break-all; }
+
+/* ── Response description ── */
+.response-info { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+.res-code {
+  font-family:var(--fm); font-size:11px; padding:3px 10px;
+  border-radius:5px; display:flex; align-items:center; gap:5px;
+}
+.res-code.ok  { background:var(--green-dim); color:var(--green); }
+.res-code.err { background:var(--red-dim);   color:var(--red); }
+
+/* ── Section divider ── */
+.section-divider {
+  display:flex; align-items:center; gap:12px; margin:32px 0 24px;
+}
+.section-divider::before, .section-divider::after {
+  content:''; flex:1; height:1px; background:var(--line);
+}
+.section-divider span {
+  font-family:var(--fm); font-size:10px; letter-spacing:.14em;
+  color:var(--muted); text-transform:uppercase; white-space:nowrap;
+}
+
+/* ── Status bar at bottom ── */
+.status-bar {
+  position:fixed; bottom:0; left:240px; right:0; z-index:10;
+  background:var(--bg2); border-top:1px solid var(--line);
+  padding:7px 48px; display:flex; align-items:center; gap:20px;
+}
+.sb-item { font-family:var(--fm); font-size:10px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+.sb-dot  { width:5px; height:5px; border-radius:50%; }
+.sb-live { background:var(--green); box-shadow:0 0 5px var(--green); animation:pulse-dot 2s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--line-hi); border-radius:3px; }
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+<nav class="sidebar">
+  <div class="nav-header">
+    <div class="nav-logo">Spine<span>Guard</span></div>
+    <div class="nav-sub">API Reference v1.0</div>
+  </div>
+
+  <a class="nav-home" href="/">← Back to Dashboard</a>
+
+  <div class="nav-section-label">Health</div>
+  <a class="nav-item" href="#status" onclick="setActive(this)">
+    <span class="nav-method m-get">GET</span>
+    <span class="nav-path">/api/status</span>
+  </a>
+
+  <div class="nav-section-label">Readings</div>
+  <a class="nav-item" href="#readings-post"     onclick="setActive(this)"><span class="nav-method m-post">POST</span><span class="nav-path">/api/readings</span></a>
+  <a class="nav-item" href="#readings-batch"    onclick="setActive(this)"><span class="nav-method m-post">POST</span><span class="nav-path">/api/readings batch</span></a>
+  <a class="nav-item" href="#readings-all"      onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/api/readings</span></a>
+  <a class="nav-item" href="#readings-latest"   onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/api/readings/latest</span></a>
+  <a class="nav-item" href="#readings-one"      onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/api/readings/:id</span></a>
+  <a class="nav-item" href="#readings-patch"    onclick="setActive(this)"><span class="nav-method m-patch">PATCH</span><span class="nav-path">/api/readings/:id</span></a>
+  <a class="nav-item" href="#readings-delete"   onclick="setActive(this)"><span class="nav-method m-delete">DEL</span><span class="nav-path">/api/readings/:id</span></a>
+  <a class="nav-item" href="#readings-bulk-del" onclick="setActive(this)"><span class="nav-method m-delete">DEL</span><span class="nav-path">/api/readings bulk</span></a>
+
+  <div class="nav-section-label">Sessions</div>
+  <a class="nav-item" href="#sessions-start"  onclick="setActive(this)"><span class="nav-method m-post">POST</span><span class="nav-path">/api/sessions/start</span></a>
+  <a class="nav-item" href="#sessions-stop"   onclick="setActive(this)"><span class="nav-method m-post">POST</span><span class="nav-path">/api/sessions/stop</span></a>
+  <a class="nav-item" href="#sessions-active" onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/sessions/active</span></a>
+  <a class="nav-item" href="#sessions-last"   onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/sessions/last</span></a>
+  <a class="nav-item" href="#sessions-all"    onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/api/sessions</span></a>
+  <a class="nav-item" href="#sessions-one"    onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/api/sessions/:id</span></a>
+  <a class="nav-item" href="#sessions-patch"  onclick="setActive(this)"><span class="nav-method m-patch">PATCH</span><span class="nav-path">/api/sessions/:id</span></a>
+  <a class="nav-item" href="#sessions-delete" onclick="setActive(this)"><span class="nav-method m-delete">DEL</span><span class="nav-path">/api/sessions/:id</span></a>
+
+  <div class="nav-section-label">Patients</div>
+  <a class="nav-item" href="#patients-post"   onclick="setActive(this)"><span class="nav-method m-post">POST</span><span class="nav-path">/api/patients</span></a>
+  <a class="nav-item" href="#patients-all"    onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/api/patients</span></a>
+  <a class="nav-item" href="#patients-one"    onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/api/patients/:id</span></a>
+  <a class="nav-item" href="#patients-patch"  onclick="setActive(this)"><span class="nav-method m-patch">PATCH</span><span class="nav-path">/api/patients/:id</span></a>
+  <a class="nav-item" href="#patients-delete" onclick="setActive(this)"><span class="nav-method m-delete">DEL</span><span class="nav-path">/api/patients/:id</span></a>
+
+  <div class="nav-section-label">Comments</div>
+  <a class="nav-item" href="#comments-post"     onclick="setActive(this)"><span class="nav-method m-post">POST</span><span class="nav-path">/api/comments</span></a>
+  <a class="nav-item" href="#comments-all"      onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/api/comments</span></a>
+  <a class="nav-item" href="#comments-one"      onclick="setActive(this)"><span class="nav-method m-get">GET</span><span class="nav-path">/api/comments/:id</span></a>
+  <a class="nav-item" href="#comments-patch"    onclick="setActive(this)"><span class="nav-method m-patch">PATCH</span><span class="nav-path">/api/comments/:id</span></a>
+  <a class="nav-item" href="#comments-delete"   onclick="setActive(this)"><span class="nav-method m-delete">DEL</span><span class="nav-path">/api/comments/:id</span></a>
+  <a class="nav-item" href="#comments-bulk-del" onclick="setActive(this)"><span class="nav-method m-delete">DEL</span><span class="nav-path">/api/comments bulk</span></a>
+</nav>
+
+<!-- ══ MAIN ═════════════════════════════════════════════════ -->
+<div class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">SpineGuard <span>API Reference</span></div>
+    </div>
+    <div class="base-url-wrap">
+      <span class="base-url-label">Base URL</span>
+      <input class="base-url-input" id="base-url" value="" placeholder="https://spineguard-api.vercel.app">
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══════════ STATUS ═══════════ -->
+    <div class="resource-section" id="status-section">
+      <div class="resource-title"><span class="resource-icon">🔍</span> Health & Status</div>
+      <div class="resource-desc">Check whether the server, database, and sensor poller are all running correctly.</div>
+
+      <!-- GET /api/status -->
+      <div class="endpoint" id="status">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/status</span>
+          <span class="endpoint-summary">Full server health snapshot</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Description</div>
+            <div class="etab" onclick="switchTab(this,'example')">Example</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <p style="font-size:13px;line-height:1.7;color:var(--text);margin-bottom:12px">Returns a full snapshot of the server including DB connection state, active session info, poller statistics, latest sensor readings, and uptime.</p>
+            <div class="response-info">
+              <span class="res-code ok">200 OK</span>
+              <span class="res-code err">500 Server Error</span>
+            </div>
+          </div>
+          <div class="tab-content" data-tab="example">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Response 200</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre>{
+  <span class="key">"ok"</span>: <span class="bool">true</span>,
+  <span class="key">"env"</span>: <span class="str">"development"</span>,
+  <span class="key">"uptime"</span>: <span class="num">142</span>,
+  <span class="key">"db"</span>: { <span class="key">"connected"</span>: <span class="bool">true</span>, <span class="key">"state"</span>: <span class="str">"connected"</span> },
+  <span class="key">"poller"</span>: { <span class="key">"intervalMs"</span>: <span class="num">100</span>, <span class="key">"totalPolls"</span>: <span class="num">850</span>, <span class="key">"totalErrors"</span>: <span class="num">0</span> },
+  <span class="key">"session"</span>: { <span class="key">"active"</span>: <span class="bool">false</span>, <span class="key">"id"</span>: <span class="null">null</span> },
+  <span class="key">"sensor"</span>: { <span class="key">"currentPitch"</span>: <span class="num">0</span>, <span class="key">"threshold"</span>: <span class="num">15</span> },
+  <span class="key">"mode"</span>: <span class="str">"db"</span>
+}</pre>
+            </div>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <button class="run-btn" onclick="runRequest('GET','/api/status',null,this)">▶ Send Request</button>
+              <div class="try-response" id="try-status"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ READINGS ═══════════ -->
+    <div class="resource-section">
+      <div class="resource-title"><span class="resource-icon">📡</span> Readings</div>
+      <div class="resource-desc">Raw MPU6050 pitch and roll data points. The ESP32 device POSTs here. The server polls these every 100ms and broadcasts live to the browser.</div>
+
+      <!-- POST single -->
+      <div class="endpoint" id="readings-post">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-post">POST</span>
+          <span class="endpoint-path">/api/readings</span>
+          <span class="endpoint-summary">Submit a single sensor reading</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Fields</div>
+            <div class="etab" onclick="switchTab(this,'example')">Example</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <table class="fields-table">
+              <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+              <tr><td class="field-name">pitch</td><td class="field-type">number</td><td class="field-req">Yes</td><td class="field-desc">Forward/back tilt in degrees. Values &gt;15° trigger slouch detection.</td></tr>
+              <tr><td class="field-name">roll</td><td class="field-type">number</td><td class="field-req">Yes</td><td class="field-desc">Side-to-side tilt in degrees.</td></tr>
+            </table>
+            <div class="response-info" style="margin-top:10px">
+              <span class="res-code ok">201 Created</span>
+              <span class="res-code err">400 Missing fields</span>
+            </div>
+          </div>
+          <div class="tab-content" data-tab="example">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre>{ <span class="key">"pitch"</span>: <span class="num">12.4</span>, <span class="key">"roll"</span>: <span class="num">-3.1</span> }</pre>
+            </div>
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Response 201</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre>{ <span class="key">"ok"</span>: <span class="bool">true</span>, <span class="key">"id"</span>: <span class="str">"66a1b2c3d4e5f6a7b8c9d0e1"</span> }</pre>
+            </div>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <div class="try-label">Request Body (JSON)</div>
+              <textarea class="try-input" id="body-readings-post">{ "pitch": 12.4, "roll": -3.1 }</textarea>
+              <div style="margin-top:8px">
+                <button class="run-btn" onclick="runRequest('POST','/api/readings','body-readings-post',this)">▶ Send Request</button>
+              </div>
+              <div class="try-response" id="try-readings-post"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST batch -->
+      <div class="endpoint" id="readings-batch">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-post">POST</span>
+          <span class="endpoint-path">/api/readings <span style="color:var(--muted);font-size:11px">batch</span></span>
+          <span class="endpoint-summary">Submit multiple readings at once</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Description</div>
+            <div class="etab" onclick="switchTab(this,'example')">Example</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <p style="font-size:13px;line-height:1.7;color:var(--text)">Send an array of readings in a single request. Useful for buffered uploads from the device when WiFi was temporarily unavailable. Invalid rows are skipped silently.</p>
+            <div class="response-info" style="margin-top:10px">
+              <span class="res-code ok">201 Created</span>
+              <span class="res-code err">400 No valid readings</span>
+            </div>
+          </div>
+          <div class="tab-content" data-tab="example">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre>{
+  <span class="key">"readings"</span>: [
+    { <span class="key">"pitch"</span>: <span class="num">5.2</span>,  <span class="key">"roll"</span>: <span class="num">1.0</span> },
+    { <span class="key">"pitch"</span>: <span class="num">18.7</span>, <span class="key">"roll"</span>: <span class="num">0.5</span> },
+    { <span class="key">"pitch"</span>: <span class="num">3.0</span>,  <span class="key">"roll"</span>: <span class="num">0.1</span>, <span class="key">"recordedAt"</span>: <span class="str">"2026-03-15T10:00:00.000Z"</span> }
+  ]
+}</pre>
+            </div>
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Response 201</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre>{ <span class="key">"ok"</span>: <span class="bool">true</span>, <span class="key">"count"</span>: <span class="num">3</span> }</pre>
+            </div>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <div class="try-label">Request Body (JSON)</div>
+              <textarea class="try-input" id="body-readings-batch" style="min-height:120px">{
+  "readings": [
+    { "pitch": 5.2, "roll": 1.0 },
+    { "pitch": 18.7, "roll": 0.5 },
+    { "pitch": 3.0, "roll": 0.1 }
+  ]
+}</textarea>
+              <div style="margin-top:8px">
+                <button class="run-btn" onclick="runRequest('POST','/api/readings','body-readings-batch',this)">▶ Send Request</button>
+              </div>
+              <div class="try-response" id="try-readings-batch"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET all -->
+      <div class="endpoint" id="readings-all">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/readings</span>
+          <span class="endpoint-summary">List all readings (paginated)</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Query Params</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <table class="fields-table">
+              <tr><th>Param</th><th>Type</th><th>Default</th><th>Description</th></tr>
+              <tr><td class="field-name">limit</td><td class="field-type">number</td><td class="field-opt">500</td><td class="field-desc">Max rows per page. Cap: 2000</td></tr>
+              <tr><td class="field-name">page</td><td class="field-type">number</td><td class="field-opt">1</td><td class="field-desc">Page number for pagination</td></tr>
+              <tr><td class="field-name">sessionId</td><td class="field-type">string</td><td class="field-opt">—</td><td class="field-desc">Filter to readings from a specific session</td></tr>
+              <tr><td class="field-name">processed</td><td class="field-type">boolean</td><td class="field-opt">—</td><td class="field-desc">Filter by processed flag: true or false</td></tr>
+            </table>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <div class="try-label">Query String (optional)</div>
+              <div class="try-row">
+                <input class="try-field" id="qs-readings-all" placeholder="limit=10&page=1" value="limit=5">
+                <button class="run-btn" onclick="runWithQS('GET','/api/readings','qs-readings-all',this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-readings-all"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET latest -->
+      <div class="endpoint" id="readings-latest">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/readings/latest</span>
+          <span class="endpoint-summary">Most recent reading</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <button class="run-btn" onclick="runRequest('GET','/api/readings/latest',null,this)">▶ Send Request</button>
+              <div class="try-response" id="try-readings-latest"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET one -->
+      <div class="endpoint" id="readings-one">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/readings/<span class="param">:id</span></span>
+          <span class="endpoint-summary">Fetch a single reading by ID</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-label">Reading ID</div>
+              <div class="try-row">
+                <input class="try-field" id="id-readings-one" placeholder="66a1b2c3d4e5f6a7b8c9d0e1">
+                <button class="run-btn" onclick="runWithId('GET','/api/readings/','id-readings-one',null,this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-readings-one"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH -->
+      <div class="endpoint" id="readings-patch">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-patch">PATCH</span>
+          <span class="endpoint-path">/api/readings/<span class="param">:id</span></span>
+          <span class="endpoint-summary">Update a reading</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Allowed Fields</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <table class="fields-table">
+              <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+              <tr><td class="field-name">pitch</td><td class="field-type">number</td><td class="field-desc">Correct the pitch value</td></tr>
+              <tr><td class="field-name">roll</td><td class="field-type">number</td><td class="field-desc">Correct the roll value</td></tr>
+              <tr><td class="field-name">processed</td><td class="field-type">boolean</td><td class="field-desc">Manually mark as processed</td></tr>
+              <tr><td class="field-name">sessionId</td><td class="field-type">string</td><td class="field-desc">Reassign to a different session</td></tr>
+            </table>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="id-readings-patch" placeholder="Reading ID">
+              </div>
+              <div class="try-label">Request Body</div>
+              <textarea class="try-input" id="body-readings-patch">{ "processed": true }</textarea>
+              <div style="margin-top:8px">
+                <button class="run-btn" onclick="runWithId('PATCH','/api/readings/','id-readings-patch','body-readings-patch',this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-readings-patch"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE one -->
+      <div class="endpoint" id="readings-delete">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-delete">DELETE</span>
+          <span class="endpoint-path">/api/readings/<span class="param">:id</span></span>
+          <span class="endpoint-summary">Delete a single reading</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-label">Reading ID</div>
+              <div class="try-row">
+                <input class="try-field" id="id-readings-delete" placeholder="66a1b2c3d4e5f6a7b8c9d0e1">
+                <button class="run-btn" style="background:var(--red)" onclick="runWithId('DELETE','/api/readings/','id-readings-delete',null,this)">▶ Delete</button>
+              </div>
+              <div class="try-response" id="try-readings-delete"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE bulk -->
+      <div class="endpoint" id="readings-bulk-del">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-delete">DELETE</span>
+          <span class="endpoint-path">/api/readings <span style="color:var(--muted);font-size:11px">bulk</span></span>
+          <span class="endpoint-summary">Delete all readings for a session</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <p style="font-size:12px;color:var(--muted);margin-bottom:10px">At least one filter required: <code style="color:var(--orange)">sessionId</code> or <code style="color:var(--orange)">before</code> (ISO date)</p>
+              <div class="try-label">Query String</div>
+              <div class="try-row">
+                <input class="try-field" id="qs-readings-bulk" placeholder="sessionId=66a1b2c3...">
+                <button class="run-btn" style="background:var(--red)" onclick="runWithQS('DELETE','/api/readings','qs-readings-bulk',this)">▶ Delete</button>
+              </div>
+              <div class="try-response" id="try-readings-bulk-del"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SESSIONS ═══════════ -->
+    <div class="resource-section">
+      <div class="resource-title"><span class="resource-icon">⏱</span> Sessions</div>
+      <div class="resource-desc">A session is one posture monitoring run. Start it, let the timer count down, and it saves a full summary to MongoDB when complete.</div>
+
+      <!-- POST start -->
+      <div class="endpoint" id="sessions-start">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-post">POST</span>
+          <span class="endpoint-path">/api/sessions/start</span>
+          <span class="endpoint-summary">Start a new session</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Fields</div>
+            <div class="etab" onclick="switchTab(this,'example')">Durations</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <table class="fields-table">
+              <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+              <tr><td class="field-name">duration</td><td class="field-type">number</td><td class="field-opt">No</td><td class="field-desc">Session length in seconds. Range 10–3600. Default: 2700</td></tr>
+              <tr><td class="field-name">patientId</td><td class="field-type">string</td><td class="field-opt">No</td><td class="field-desc">Patient ID string. Default: User1</td></tr>
+              <tr><td class="field-name">notes</td><td class="field-type">string</td><td class="field-opt">No</td><td class="field-desc">Optional clinical notes</td></tr>
+            </table>
+            <div class="response-info" style="margin-top:10px">
+              <span class="res-code ok">201 Created</span>
+              <span class="res-code err">409 Already active</span>
+            </div>
+          </div>
+          <div class="tab-content" data-tab="example">
+            <div class="code-block">
+              <div class="code-header"><span class="code-lang">Duration Reference</span></div>
+              <pre><span class="comment">// seconds → label</span>
+10    → 10 seconds (quick test)
+30    → 30 seconds
+60    → 1 minute
+300   → 5 minutes
+600   → 10 minutes
+900   → 15 minutes
+1800  → 30 minutes
+2700  → 45 minutes (default)
+3600  → 60 minutes</pre>
+            </div>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <div class="try-label">Request Body</div>
+              <textarea class="try-input" id="body-sessions-start">{ "patientId": "User1", "duration": 30, "notes": "Test session" }</textarea>
+              <div style="margin-top:8px">
+                <button class="run-btn" onclick="runRequest('POST','/api/sessions/start','body-sessions-start',this)">▶ Start Session</button>
+              </div>
+              <div class="try-response" id="try-sessions-start"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST stop -->
+      <div class="endpoint" id="sessions-stop">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-post">POST</span>
+          <span class="endpoint-path">/api/sessions/stop</span>
+          <span class="endpoint-summary">Stop the active session</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <p style="font-size:12px;color:var(--muted);margin-bottom:10px">No body required. Stops whichever session is currently running.</p>
+              <button class="run-btn" style="background:var(--red)" onclick="runRequest('POST','/api/sessions/stop',null,this)">▶ Stop Session</button>
+              <div class="try-response" id="try-sessions-stop"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET active -->
+      <div class="endpoint" id="sessions-active">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/sessions/active</span>
+          <span class="endpoint-summary">Live stats of running session</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <button class="run-btn" onclick="runRequest('GET','/api/sessions/active',null,this)">▶ Send Request</button>
+              <div class="try-response" id="try-sessions-active"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET last -->
+      <div class="endpoint" id="sessions-last">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/sessions/last</span>
+          <span class="endpoint-summary">Most recent session (any status)</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <button class="run-btn" onclick="runRequest('GET','/api/sessions/last',null,this)">▶ Send Request</button>
+              <div class="try-response" id="try-sessions-last"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET all -->
+      <div class="endpoint" id="sessions-all">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/sessions</span>
+          <span class="endpoint-summary">List all sessions</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Query Params</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <table class="fields-table">
+              <tr><th>Param</th><th>Default</th><th>Description</th></tr>
+              <tr><td class="field-name">limit</td><td class="field-opt">20</td><td class="field-desc">Max per page (cap 100)</td></tr>
+              <tr><td class="field-name">page</td><td class="field-opt">1</td><td class="field-desc">Page number</td></tr>
+              <tr><td class="field-name">patientId</td><td class="field-opt">—</td><td class="field-desc">Filter by patient</td></tr>
+              <tr><td class="field-name">status</td><td class="field-opt">—</td><td class="field-desc">Completed · Manual Stop · In Progress</td></tr>
+            </table>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="qs-sessions-all" placeholder="limit=5&status=Completed" value="limit=5">
+                <button class="run-btn" onclick="runWithQS('GET','/api/sessions','qs-sessions-all',this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-sessions-all"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET one -->
+      <div class="endpoint" id="sessions-one">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/sessions/<span class="param">:id</span></span>
+          <span class="endpoint-summary">Fetch a session by ID</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="id-sessions-one" placeholder="Session ID">
+                <button class="run-btn" onclick="runWithId('GET','/api/sessions/','id-sessions-one',null,this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-sessions-one"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATCH session -->
+      <div class="endpoint" id="sessions-patch">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-patch">PATCH</span>
+          <span class="endpoint-path">/api/sessions/<span class="param">:id</span></span>
+          <span class="endpoint-summary">Edit notes or status</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Allowed Fields</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <table class="fields-table">
+              <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+              <tr><td class="field-name">notes</td><td class="field-type">string</td><td class="field-desc">Clinical notes for this session</td></tr>
+              <tr><td class="field-name">patientId</td><td class="field-type">string</td><td class="field-desc">Reassign to a different patient</td></tr>
+              <tr><td class="field-name">status</td><td class="field-type">string</td><td class="field-desc">Completed · Manual Stop · In Progress</td></tr>
+              <tr><td class="field-name">plannedDuration</td><td class="field-type">number</td><td class="field-desc">Correct the planned duration (seconds)</td></tr>
+            </table>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="id-sessions-patch" placeholder="Session ID">
+              </div>
+              <div class="try-label">Request Body</div>
+              <textarea class="try-input" id="body-sessions-patch">{ "notes": "Patient reported discomfort at 20 min mark" }</textarea>
+              <div style="margin-top:8px">
+                <button class="run-btn" onclick="runWithId('PATCH','/api/sessions/','id-sessions-patch','body-sessions-patch',this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-sessions-patch"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE session -->
+      <div class="endpoint" id="sessions-delete">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-delete">DELETE</span>
+          <span class="endpoint-path">/api/sessions/<span class="param">:id</span></span>
+          <span class="endpoint-summary">Delete session + cascade readings</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <p style="font-size:12px;color:var(--red);margin-bottom:10px">⚠ Also deletes all readings linked to this session. Cannot delete an active session.</p>
+              <div class="try-row">
+                <input class="try-field" id="id-sessions-delete" placeholder="Session ID">
+                <button class="run-btn" style="background:var(--red)" onclick="runWithId('DELETE','/api/sessions/','id-sessions-delete',null,this)">▶ Delete</button>
+              </div>
+              <div class="try-response" id="try-sessions-delete"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ PATIENTS ═══════════ -->
+    <div class="resource-section">
+      <div class="resource-title"><span class="resource-icon">🧑‍⚕️</span> Patients</div>
+      <div class="resource-desc">Patient records. The patientId string (not the MongoDB _id) is used as the key everywhere.</div>
+
+      <div class="endpoint" id="patients-post">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-post">POST</span>
+          <span class="endpoint-path">/api/patients</span>
+          <span class="endpoint-summary">Create a patient</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Fields</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <table class="fields-table">
+              <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+              <tr><td class="field-name">name</td><td class="field-type">string</td><td class="field-req">Yes</td><td class="field-desc">Full display name</td></tr>
+              <tr><td class="field-name">patientId</td><td class="field-type">string</td><td class="field-req">Yes</td><td class="field-desc">Unique ID used across all resources (e.g. PT002)</td></tr>
+              <tr><td class="field-name">age</td><td class="field-type">number</td><td class="field-opt">No</td><td class="field-desc">Age in years</td></tr>
+              <tr><td class="field-name">email</td><td class="field-type">string</td><td class="field-opt">No</td><td class="field-desc">Contact email</td></tr>
+              <tr><td class="field-name">phone</td><td class="field-type">string</td><td class="field-opt">No</td><td class="field-desc">Contact phone number</td></tr>
+              <tr><td class="field-name">doctor</td><td class="field-type">string</td><td class="field-opt">No</td><td class="field-desc">Assigned doctor. Default: Dr. Adeyemi</td></tr>
+              <tr><td class="field-name">notes</td><td class="field-type">string</td><td class="field-opt">No</td><td class="field-desc">Clinical notes</td></tr>
+            </table>
+            <div class="response-info" style="margin-top:10px">
+              <span class="res-code ok">201 Created</span>
+              <span class="res-code err">409 patientId already exists</span>
+            </div>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <div class="try-label">Request Body</div>
+              <textarea class="try-input" id="body-patients-post">{
+  "name": "Tunde Okafor",
+  "patientId": "PT002",
+  "age": 34,
+  "doctor": "Dr. Adeyemi"
+}</textarea>
+              <div style="margin-top:8px">
+                <button class="run-btn" onclick="runRequest('POST','/api/patients','body-patients-post',this)">▶ Create Patient</button>
+              </div>
+              <div class="try-response" id="try-patients-post"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="patients-all">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/patients</span>
+          <span class="endpoint-summary">List all patients</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="qs-patients-all" placeholder="limit=20&doctor=Dr.+Adeyemi">
+                <button class="run-btn" onclick="runWithQS('GET','/api/patients','qs-patients-all',this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-patients-all"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="patients-one">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/patients/<span class="param">:patientId</span></span>
+          <span class="endpoint-summary">Fetch one patient</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="id-patients-one" placeholder="Patient ID (e.g. User1)" value="User1">
+                <button class="run-btn" onclick="runWithId('GET','/api/patients/','id-patients-one',null,this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-patients-one"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="patients-patch">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-patch">PATCH</span>
+          <span class="endpoint-path">/api/patients/<span class="param">:patientId</span></span>
+          <span class="endpoint-summary">Update patient details</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="id-patients-patch" placeholder="Patient ID (e.g. User1)" value="User1">
+              </div>
+              <div class="try-label">Request Body (allowed: name, age, email, phone, doctor, notes)</div>
+              <textarea class="try-input" id="body-patients-patch">{ "phone": "+234 800 000 0099", "notes": "Follow-up April 2026" }</textarea>
+              <div style="margin-top:8px">
+                <button class="run-btn" onclick="runWithId('PATCH','/api/patients/','id-patients-patch','body-patients-patch',this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-patients-patch"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="patients-delete">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-delete">DELETE</span>
+          <span class="endpoint-path">/api/patients/<span class="param">:patientId</span></span>
+          <span class="endpoint-summary">Delete a patient record</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="id-patients-delete" placeholder="Patient ID (e.g. PT002)">
+                <button class="run-btn" style="background:var(--red)" onclick="runWithId('DELETE','/api/patients/','id-patients-delete',null,this)">▶ Delete</button>
+              </div>
+              <div class="try-response" id="try-patients-delete"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ COMMENTS ═══════════ -->
+    <div class="resource-section">
+      <div class="resource-title"><span class="resource-icon">💬</span> Comments</div>
+      <div class="resource-desc">Doctor notes shown in the live ticker. New comments are pushed immediately to all open browser tabs via Socket.io.</div>
+
+      <div class="endpoint" id="comments-post">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-post">POST</span>
+          <span class="endpoint-path">/api/comments</span>
+          <span class="endpoint-summary">Add a doctor comment</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs">
+            <div class="etab active" onclick="switchTab(this,'desc')">Fields</div>
+            <div class="etab" onclick="switchTab(this,'try')">Try It</div>
+          </div>
+          <div class="tab-content active" data-tab="desc">
+            <table class="fields-table">
+              <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+              <tr><td class="field-name">text</td><td class="field-type">string</td><td class="field-req">Yes</td><td class="field-desc">The comment text shown in the ticker</td></tr>
+              <tr><td class="field-name">doctor</td><td class="field-type">string</td><td class="field-opt">No</td><td class="field-desc">Doctor name. Default: Dr. Adeyemi</td></tr>
+              <tr><td class="field-name">patientId</td><td class="field-type">string</td><td class="field-opt">No</td><td class="field-desc">Patient this comment is for. Default: User1</td></tr>
+            </table>
+          </div>
+          <div class="tab-content" data-tab="try">
+            <div class="try-it">
+              <div class="try-label">Request Body</div>
+              <textarea class="try-input" id="body-comments-post">{ "doctor": "Dr. Adeyemi", "text": "Excellent improvement — keep it up!", "patientId": "User1" }</textarea>
+              <div style="margin-top:8px">
+                <button class="run-btn" onclick="runRequest('POST','/api/comments','body-comments-post',this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-comments-post"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="comments-all">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/comments</span>
+          <span class="endpoint-summary">List comments</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="qs-comments-all" placeholder="patientId=User1&limit=10" value="limit=10">
+                <button class="run-btn" onclick="runWithQS('GET','/api/comments','qs-comments-all',this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-comments-all"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="comments-one">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-get">GET</span>
+          <span class="endpoint-path">/api/comments/<span class="param">:id</span></span>
+          <span class="endpoint-summary">Fetch one comment</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="id-comments-one" placeholder="Comment MongoDB _id">
+                <button class="run-btn" onclick="runWithId('GET','/api/comments/','id-comments-one',null,this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-comments-one"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="comments-patch">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-patch">PATCH</span>
+          <span class="endpoint-path">/api/comments/<span class="param">:id</span></span>
+          <span class="endpoint-summary">Edit a comment</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="id-comments-patch" placeholder="Comment MongoDB _id">
+              </div>
+              <div class="try-label">Request Body (allowed: text, doctor, patientId)</div>
+              <textarea class="try-input" id="body-comments-patch">{ "text": "Updated note — great posture maintained." }</textarea>
+              <div style="margin-top:8px">
+                <button class="run-btn" onclick="runWithId('PATCH','/api/comments/','id-comments-patch','body-comments-patch',this)">▶ Send</button>
+              </div>
+              <div class="try-response" id="try-comments-patch"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="comments-delete">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-delete">DELETE</span>
+          <span class="endpoint-path">/api/comments/<span class="param">:id</span></span>
+          <span class="endpoint-summary">Delete a comment</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="id-comments-delete" placeholder="Comment MongoDB _id">
+                <button class="run-btn" style="background:var(--red)" onclick="runWithId('DELETE','/api/comments/','id-comments-delete',null,this)">▶ Delete</button>
+              </div>
+              <div class="try-response" id="try-comments-delete"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint" id="comments-bulk-del">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge m-delete">DELETE</span>
+          <span class="endpoint-path">/api/comments <span style="color:var(--muted);font-size:11px">bulk</span></span>
+          <span class="endpoint-summary">Delete all for a patient</span>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-tabs"><div class="etab active" onclick="switchTab(this,'try')">Try It</div></div>
+          <div class="tab-content active" data-tab="try">
+            <div class="try-it">
+              <div class="try-row">
+                <input class="try-field" id="qs-comments-bulk" placeholder="patientId=User1" value="patientId=User1">
+                <button class="run-btn" style="background:var(--red)" onclick="runWithQS('DELETE','/api/comments','qs-comments-bulk',this)">▶ Delete All</button>
+              </div>
+              <div class="try-response" id="try-comments-bulk-del"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Status bar -->
+<div class="status-bar">
+  <div class="sb-item"><span class="sb-dot sb-live"></span><span id="sb-server">Checking server…</span></div>
+  <div class="sb-item" id="sb-db">—</div>
+  <div class="sb-item" id="sb-mode">—</div>
+  <div class="sb-item" id="sb-session">—</div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   ENDPOINT TOGGLE
+════════════════════════════════════════════════════════════ */
+function toggleEndpoint(header) {
+  header.parentElement.classList.toggle('open');
+}
+
+/* ════════════════════════════════════════════════════════════
+   TAB SWITCHING
+════════════════════════════════════════════════════════════ */
+function switchTab(tab, name) {
+  var body = tab.closest('.endpoint-body');
+  body.querySelectorAll('.etab').forEach(function(t) { t.classList.remove('active'); });
+  body.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  tab.classList.add('active');
+  body.querySelector('[data-tab="' + name + '"]').classList.add('active');
+}
+
+/* ════════════════════════════════════════════════════════════
+   NAV ACTIVE STATE
+════════════════════════════════════════════════════════════ */
+function setActive(el) {
+  document.querySelectorAll('.nav-item').forEach(function(i) { i.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+/* ════════════════════════════════════════════════════════════
+   BASE URL
+════════════════════════════════════════════════════════════ */
+function getBase() {
+  var manual = document.getElementById('base-url').value.trim();
+  if (manual) return manual.replace(/\/$/, '');
+  return ((window.SG_CONFIG && window.SG_CONFIG.API_BASE_URL) || '').replace(/\/$/, '');
+}
+
+/* ════════════════════════════════════════════════════════════
+   COPY CODE
+════════════════════════════════════════════════════════════ */
+function copyCode(btn) {
+  var pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(function() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+/* ════════════════════════════════════════════════════════════
+   REQUEST RUNNER
+════════════════════════════════════════════════════════════ */
+async function runRequest(method, path, bodyId, btn) {
+  var url     = getBase() + path;
+  var respEl  = document.getElementById('try' + path.replace(/\//g,'-'));
+  if (!respEl) respEl = btn.closest('.try-it').querySelector('.try-response');
+  await fire(method, url, bodyId, respEl, btn);
+}
+
+async function runWithQS(method, path, qsId, btn) {
+  var qs = document.getElementById(qsId).value.trim();
+  var url = getBase() + path + (qs ? '?' + qs : '');
+  var respEl = btn.closest('.try-it').querySelector('.try-response');
+  await fire(method, url, null, respEl, btn);
+}
+
+async function runWithId(method, pathPrefix, idId, bodyId, btn) {
+  var id = document.getElementById(idId).value.trim();
+  if (!id) { alert('Please enter an ID.'); return; }
+  var url = getBase() + pathPrefix + encodeURIComponent(id);
+  var respEl = btn.closest('.try-it').querySelector('.try-response');
+  await fire(method, url, bodyId, respEl, btn);
+}
+
+async function fire(method, url, bodyId, respEl, btn) {
+  var orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  var opts = { method: method, headers: {} };
+  if (bodyId) {
+    try {
+      var raw = document.getElementById(bodyId).value;
+      JSON.parse(raw); // validate
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = raw;
+    } catch(e) {
+      showResponse(respEl, 0, 'Invalid JSON: ' + e.message);
+      btn.disabled = false; btn.textContent = orig; return;
+    }
+  }
+
+  try {
+    var start = Date.now();
+    var res   = await fetch(url, opts);
+    var ms    = Date.now() - start;
+    var text  = await res.text();
+    var pretty;
+    try { pretty = JSON.stringify(JSON.parse(text), null, 2); }
+    catch(_) { pretty = text; }
+    showResponse(respEl, res.status, pretty, ms);
+  } catch(e) {
+    showResponse(respEl, 0, 'Network error: ' + e.message + '\n\nMake sure the server is running at ' + getBase());
+  }
+
+  btn.disabled = false; btn.textContent = orig;
+}
+
+function showResponse(el, status, body, ms) {
+  el.classList.add('visible');
+  var ok = status >= 200 && status < 300;
+  el.innerHTML = '<div class="response-status">' +
+    '<span class="status-dot ' + (ok ? 'status-ok' : 'status-err') + '"></span>' +
+    '<span style="color:' + (ok ? 'var(--green)' : 'var(--red)') + ';font-weight:600">' + (status || 'ERR') + '</span>' +
+    (ms ? '<span style="color:var(--muted)">' + ms + 'ms</span>' : '') +
+    '</div>' +
+    '<div class="response-body">' + escHtml(body) + '</div>';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ════════════════════════════════════════════════════════════
+   STATUS BAR POLL
+════════════════════════════════════════════════════════════ */
+async function pollStatus() {
+  try {
+    var res  = await fetch(getBase() + '/api/status');
+    var data = await res.json();
+    document.getElementById('sb-server').textContent = 'Server online';
+    document.getElementById('sb-db').textContent     = data.db?.connected ? '● MongoDB connected' : '○ MongoDB disconnected';
+    document.getElementById('sb-mode').textContent   = 'Mode: ' + (data.mode || 'db').toUpperCase();
+    document.getElementById('sb-session').textContent = data.session?.active
+      ? '● Session active — ' + data.session.remaining + 's remaining'
+      : '○ No active session';
+  } catch(_) {
+    document.getElementById('sb-server').textContent = 'Server offline';
+  }
+}
+
+pollStatus();
+setInterval(pollStatus, 5000);
+
+/* ════════════════════════════════════════════════════════════
+   OPEN FIRST ENDPOINT ON LOAD
+════════════════════════════════════════════════════════════ */
+document.getElementById('status').classList.add('open');
+
+// Pre-fill base URL from config.js
+(function() {
+  var cfg = window.SG_CONFIG;
+  if (cfg && cfg.API_BASE_URL) {
+    document.getElementById('base-url').value = cfg.API_BASE_URL;
+  }
+})();
+</script>
+</body>
+</html>

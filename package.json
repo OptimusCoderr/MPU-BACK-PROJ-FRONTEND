@@ -1,0 +1,10 @@
+{
+  "name": "spineguard-ui",
+  "version": "1.0.0",
+  "description": "SpineGuard — Frontend UI (deploy separately on Vercel)",
+  "private": true,
+  "scripts": {
+    "dev"   : "npx serve public",
+    "deploy": "vercel --prod"
+  }
+}

@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpineGuard — Live Session</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="/config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://js.pusher.com/8.2/pusher.min.js"></script>
+
+<style>
+:root {
+  --bg:        #0a0c10;
+  --bg2:       #11141b;
+  --bg3:       #181c25;
+  --bg4:       #1e2230;
+  --border:    rgba(255,255,255,0.07);
+  --border-hi: rgba(255,255,255,0.15);
+  --text:      #e8eaf0;
+  --muted:     #5a6070;
+  --good:      #1fba87;
+  --good-dim:  rgba(31,186,135,0.13);
+  --bad:       #f05050;
+  --bad-dim:   rgba(240,80,80,0.13);
+  --accent:    #4a9eff;
+  --gold:      #f5c842;
+  --fh: 'Syne', sans-serif;
+  --fm: 'JetBrains Mono', monospace;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  background:var(--bg); color:var(--text);
+  font-family:var(--fh); min-height:100vh; overflow-x:hidden;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(74,158,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(74,158,255,.022) 1px,transparent 1px);
+  background-size:44px 44px; pointer-events:none; z-index:0;
+}
+
+.wrap { position:relative; z-index:1; width:100%; padding:16px 20px 24px; }
+
+/* ── Top bar ── */
+.topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border);
+}
+.logo { font-size:17px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+.logo span { color:var(--accent); }
+.badges { display:flex; align-items:center; gap:10px; }
+.badge {
+  font-family:var(--fm); font-size:10px; letter-spacing:.1em;
+  padding:3px 11px; border-radius:20px; border:1px solid var(--border);
+  color:var(--muted); display:flex; align-items:center; gap:5px;
+  transition:all .3s; text-transform:uppercase;
+}
+.badge::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.badge.live  { color:var(--good); border-color:rgba(31,186,135,.3); }
+.badge.db-ok { color:var(--accent); border-color:rgba(74,158,255,.3); }
+.badge.err   { color:var(--bad);  border-color:rgba(240,80,80,.3); }
+
+.mode-toggle-btn {
+  font-family:var(--fm); font-size:10px; letter-spacing:.1em;
+  padding:4px 12px; border-radius:20px; border:1px solid var(--border-hi);
+  cursor:pointer; transition:all .25s; text-transform:uppercase;
+  display:flex; align-items:center; gap:6px;
+  background:var(--bg3); color:var(--muted);
+}
+.mode-toggle-btn:hover { border-color:rgba(255,255,255,.25); color:var(--text); }
+.mode-toggle-btn.sim-mode {
+  background:rgba(245,200,66,.1); color:var(--gold);
+  border-color:rgba(245,200,66,.35);
+}
+.mode-toggle-btn.db-mode {
+  background:rgba(74,158,255,.1); color:var(--accent);
+  border-color:rgba(74,158,255,.35);
+}
+
+/* ════════════════════════════════
+   PATIENT CARD
+════════════════════════════════ */
+.patient-card {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:16px; padding:12px 18px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; margin-bottom:12px; transition:border-color .3s;
+}
+.patient-card.locked { opacity:.7; }
+
+.patient-left { display:flex; align-items:center; gap:14px; }
+
+.patient-avatar {
+  width:46px; height:46px; border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),#1fba87);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; font-weight:800; color:#fff; flex-shrink:0;
+  letter-spacing:0; font-family:var(--fh);
+  transition:background .3s;
+}
+
+.patient-info { display:flex; flex-direction:column; gap:2px; }
+.patient-name-display {
+  font-size:18px; font-weight:700; color:var(--text);
+  letter-spacing:.02em; line-height:1.2;
+}
+.patient-sub {
+  font-size:11px; font-family:var(--fm); color:var(--muted);
+  letter-spacing:.06em; text-transform:uppercase;
+}
+
+.patient-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+
+/* Patient selector dropdown */
+.patient-select-wrap { position:relative; }
+.patient-select {
+  appearance:none; -webkit-appearance:none;
+  background:var(--bg3); border:1px solid var(--border-hi);
+  color:var(--text); font-family:var(--fm); font-size:12px;
+  padding:8px 32px 8px 12px; border-radius:9px;
+  cursor:pointer; outline:none; transition:all .2s;
+  letter-spacing:.04em; min-width:130px;
+}
+.patient-select:hover { border-color:rgba(74,158,255,.4); }
+.patient-select:focus { border-color:var(--accent); }
+.patient-select:disabled { opacity:.4; cursor:not-allowed; }
+.patient-select option { background:var(--bg3); }
+.select-arrow {
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  pointer-events:none; color:var(--muted); font-size:10px;
+}
+
+/* Inline name editor */
+.name-edit-wrap {
+  display:flex; align-items:center; gap:8px;
+}
+.name-input {
+  background:var(--bg3); border:1px solid var(--accent);
+  color:var(--text); font-family:var(--fh); font-size:15px;
+  font-weight:700; padding:6px 10px; border-radius:8px;
+  outline:none; width:160px; letter-spacing:.02em;
+  transition:border-color .2s;
+}
+.name-input:focus { border-color:var(--good); }
+
+.btn-icon {
+  width:32px; height:32px; border-radius:8px;
+  border:1px solid var(--border-hi); background:var(--bg3);
+  color:var(--muted); font-size:14px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s; flex-shrink:0;
+}
+.btn-icon:hover { background:var(--bg4); color:var(--text); border-color:rgba(255,255,255,.2); }
+.btn-icon.confirm { color:var(--good); border-color:rgba(31,186,135,.3); }
+.btn-icon.confirm:hover { background:var(--good-dim); }
+.btn-icon.cancel  { color:var(--bad);  border-color:rgba(240,80,80,.3); }
+.btn-icon.cancel:hover  { background:var(--bad-dim); }
+
+.sensor-status {
+  font-size:10px; font-family:var(--fm); letter-spacing:.08em;
+  padding:4px 10px; border-radius:20px; text-transform:uppercase;
+  display:flex; align-items:center; gap:5px;
+  transition:all .3s;
+}
+.sensor-status::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.sensor-status.idle    { color:var(--muted); border:1px solid var(--border); }
+.sensor-status.active  { color:var(--good);  border:1px solid rgba(31,186,135,.3); }
+.sensor-status.active::before { animation:blink 1s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── Add Patient Panel ── */
+.add-patient-panel {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:16px; margin-bottom:16px;
+  overflow:hidden;
+  max-height:0; opacity:0;
+  transition:max-height .35s cubic-bezier(.4,0,.2,1), opacity .25s, border-color .3s;
+}
+.add-patient-panel.open {
+  max-height:400px; opacity:1;
+  border-color:rgba(74,158,255,.3);
+}
+.add-patient-inner {
+  padding:18px 20px;
+}
+.add-patient-title {
+  font-size:11px; font-family:var(--fm); letter-spacing:.12em;
+  color:var(--accent); text-transform:uppercase; margin-bottom:14px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.add-patient-close {
+  width:22px; height:22px; border-radius:6px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--muted); font-size:12px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .15s;
+}
+.add-patient-close:hover { background:var(--bad-dim); color:var(--bad); border-color:rgba(240,80,80,.3); }
+.ap-fields {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;
+}
+.ap-field { display:flex; flex-direction:column; gap:5px; }
+.ap-label {
+  font-size:9px; font-family:var(--fm); letter-spacing:.1em;
+  color:var(--muted); text-transform:uppercase;
+}
+.ap-input {
+  background:var(--bg3); border:1px solid var(--border);
+  color:var(--text); font-family:var(--fm); font-size:13px;
+  padding:8px 11px; border-radius:9px; outline:none;
+  transition:border-color .2s; width:100%;
+}
+.ap-input:focus { border-color:var(--accent); }
+.ap-input::placeholder { color:var(--muted); }
+.ap-input.required-err { border-color:var(--bad); }
+.ap-actions { display:flex; gap:8px; }
+.ap-btn {
+  flex:1; padding:9px; border-radius:9px; border:1px solid var(--border-hi);
+  font-family:var(--fh); font-size:12px; font-weight:700; letter-spacing:.05em;
+  cursor:pointer; transition:all .15s; text-transform:uppercase;
+}
+.ap-btn.save { background:var(--accent); color:#fff; border-color:transparent; }
+.ap-btn.save:hover { filter:brightness(1.1); }
+.ap-btn.save:disabled { opacity:.4; cursor:not-allowed; }
+.ap-btn.clear { background:var(--bg3); color:var(--muted); }
+.ap-btn.clear:hover { color:var(--text); }
+.ap-feedback {
+  font-size:11px; font-family:var(--fm); margin-top:8px;
+  min-height:16px; transition:color .2s;
+}
+.ap-feedback.ok  { color:var(--good); }
+.ap-feedback.err { color:var(--bad); }
+
+/* ── Grid ── */
+.grid { display:grid; grid-template-columns:minmax(380px,42%) 1fr; gap:14px; align-items:start; height:calc(100vh - 180px); }
+
+/* ════════════════════════════════
+   SPINE PANEL
+════════════════════════════════ */
+.spine-panel {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:20px; overflow:hidden; display:flex; flex-direction:column;
+  position:relative; transition:box-shadow .4s; height:100%;
+}
+.spine-panel::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg,transparent,var(--good),transparent);
+  transition:background .4s; z-index:2;
+}
+.spine-panel.bad::before { background:linear-gradient(90deg,transparent,var(--bad),transparent); }
+@keyframes ring-pulse {
+  0%  { box-shadow:0 0 0 0 rgba(240,80,80,.45); }
+  70% { box-shadow:0 0 0 20px rgba(240,80,80,0); }
+  100%{ box-shadow:0 0 0 0 rgba(240,80,80,0); }
+}
+.spine-panel.bad { animation:ring-pulse 1.5s ease-out infinite; }
+
+.canvas-wrap { position:relative; width:100%; flex:1; min-height:0; cursor:grab; }
+.canvas-wrap:active { cursor:grabbing; }
+#c3d { display:block; width:100%; height:100%; }
+
+/* Idle overlay — shown when session not running */
+.spine-idle-overlay {
+  position:absolute; inset:0;
+  background:rgba(10,12,16,.55); backdrop-filter:blur(2px);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; pointer-events:none; transition:opacity .4s;
+}
+.spine-idle-overlay.hidden { opacity:0; }
+.idle-icon { font-size:32px; opacity:.4; }
+.idle-txt  { font-size:12px; font-family:var(--fm); color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }
+
+/* HUD */
+.hud {
+  position:absolute; inset:0; pointer-events:none;
+  padding:14px 16px; display:flex; flex-direction:column; justify-content:space-between;
+}
+.hud-top { display:flex; justify-content:space-between; align-items:flex-start; }
+.hud-bot { display:flex; justify-content:space-between; align-items:flex-end; }
+.hud-angle { display:flex; flex-direction:column; gap:3px; }
+.hud-lbl { font-size:9px; font-family:var(--fm); letter-spacing:.12em; color:var(--muted); text-transform:uppercase; }
+.hud-val { font-size:38px; font-weight:800; font-family:var(--fm); line-height:1; color:var(--good); transition:color .25s; letter-spacing:-1px; }
+.hud-val.bad { color:var(--bad); }
+.hud-val.roll-val { font-size:28px; color:var(--accent); text-align:right; }
+.mode-pill {
+  font-size:10px; font-weight:700; letter-spacing:.1em; padding:4px 13px;
+  border-radius:20px; text-transform:uppercase;
+  background:var(--good-dim); color:var(--good);
+  border:1px solid rgba(31,186,135,.28); transition:all .3s;
+}
+.mode-pill.bad { background:var(--bad-dim); color:var(--bad); border-color:rgba(240,80,80,.28); }
+.hud-region { font-size:9px; font-family:var(--fm); color:var(--muted); letter-spacing:.1em; }
+.hud-hint   { font-size:9px; font-family:var(--fm); color:rgba(90,96,112,.6); letter-spacing:.06em; }
+
+.spine-strip { padding:12px 16px; display:flex; gap:12px; border-top:1px solid var(--border); }
+.pr-box { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:9px 12px; text-align:center; }
+.pr-lbl { font-size:9px; font-family:var(--fm); color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px; }
+.pr-val { font-size:17px; font-weight:500; font-family:var(--fm); color:var(--text); transition:color .25s; }
+.last-read { font-size:10px; font-family:var(--fm); color:var(--muted); padding:0 16px 12px; }
+.last-read span { color:var(--accent); }
+
+/* ════════════════════════════════
+   RIGHT COLUMN
+════════════════════════════════ */
+.right-col { display:flex; flex-direction:column; gap:11px; height:100%; overflow-y:auto; padding-right:4px; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+
+.timer-card { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:18px 22px; }
+.card-lbl { font-size:9px; font-family:var(--fm); letter-spacing:.14em; color:var(--muted); text-transform:uppercase; margin-bottom:8px; }
+.timer-num { font-size:52px; font-weight:800; font-family:var(--fm); letter-spacing:-2px; line-height:1; color:var(--text); transition:color .3s; }
+.timer-num.urgent { color:var(--bad); }
+.prog-track { height:3px; background:var(--border); border-radius:2px; margin-top:12px; overflow:hidden; }
+.prog-fill  { height:100%; width:0%; border-radius:2px; background:var(--accent); transition:width 1s linear, background .3s; }
+.prog-fill.bad { background:var(--bad); }
+
+.dur-card { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:16px 18px; }
+.dur-presets { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:14px; }
+.dur-btn {
+  padding:8px 4px; border-radius:8px; border:1px solid var(--border);
+  background:var(--bg3); color:var(--muted); font-family:var(--fm);
+  font-size:11px; cursor:pointer; transition:all .15s; text-align:center; letter-spacing:.04em;
+}
+.dur-btn:hover { border-color:var(--border-hi); color:var(--text); }
+.dur-btn.active { background:rgba(74,158,255,.13); border-color:rgba(74,158,255,.4); color:var(--accent); }
+.dur-btn:disabled { opacity:.35; cursor:not-allowed; }
+.dur-custom { display:flex; align-items:center; gap:10px; }
+.dur-custom label { font-size:10px; font-family:var(--fm); color:var(--muted); letter-spacing:.08em; white-space:nowrap; text-transform:uppercase; }
+.dur-custom input[type=range] { flex:1; accent-color:var(--accent); }
+.dur-custom-val { font-size:12px; font-family:var(--fm); color:var(--text); min-width:52px; text-align:right; }
+.dur-selected { margin-top:10px; font-size:11px; font-family:var(--fm); color:var(--muted); display:flex; align-items:center; gap:6px; }
+.dur-selected strong { color:var(--accent); font-weight:500; }
+
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.stat { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:13px 11px; }
+.stat-lbl { font-size:9px; font-family:var(--fm); letter-spacing:.11em; color:var(--muted); text-transform:uppercase; margin-bottom:5px; }
+.stat-val { font-size:22px; font-weight:600; font-family:var(--fm); color:var(--text); line-height:1; }
+.stat-val.good { color:var(--good); }
+.stat-val.bad  { color:var(--bad); }
+.stat-val.accent { color:var(--accent); }
+
+.controls { display:flex; gap:10px; }
+.btn {
+  flex:1; padding:13px; border-radius:12px; border:1px solid var(--border-hi);
+  font-family:var(--fh); font-size:13px; font-weight:700; letter-spacing:.06em;
+  cursor:pointer; transition:all .15s; background:var(--bg2); color:var(--text); text-transform:uppercase;
+}
+.btn:hover  { background:var(--bg4); }
+.btn:active { transform:scale(.97); }
+.btn.primary { background:var(--accent); color:#fff; border-color:transparent; box-shadow:0 0 22px rgba(74,158,255,.28); }
+.btn.primary:hover { filter:brightness(1.1); }
+.btn.danger  { background:var(--bad-dim); color:var(--bad); border-color:rgba(240,80,80,.3); }
+.btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.btn.reset {
+  background:var(--bg3); color:var(--muted);
+  border-color:var(--border-hi);
+  flex:0 0 auto; padding:13px 18px;
+}
+.btn.reset:hover { color:var(--text); background:var(--bg4); }
+
+.ticker-wrap { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:10px 14px; overflow:hidden; }
+.ticker-lbl  { font-size:9px; font-family:var(--fm); color:var(--accent); letter-spacing:.12em; text-transform:uppercase; margin-bottom:5px; }
+.ticker-scroll { display:flex; white-space:nowrap; animation:scroll-tick 28s linear infinite; font-size:12px; font-family:var(--fm); color:var(--muted); }
+.ticker-scroll span { margin-right:72px; }
+@keyframes scroll-tick { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+.sim-bar { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; flex-direction:column; gap:10px; }
+.sim-row { display:flex; align-items:center; gap:10px; }
+.sim-lbl { font-size:10px; font-family:var(--fm); color:var(--muted); letter-spacing:.08em; text-transform:uppercase; min-width:50px; }
+.sim-row input[type=range] { flex:1; accent-color:var(--accent); }
+.sim-v { font-size:12px; font-family:var(--fm); color:var(--text); min-width:40px; text-align:right; }
+
+/* Session done overlay */
+.overlay {
+  position:fixed; inset:0; background:rgba(10,12,16,.9); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center; z-index:200;
+  opacity:0; pointer-events:none; transition:opacity .4s;
+}
+.overlay.show { opacity:1; pointer-events:all; }
+.done-card { background:var(--bg2); border:1px solid var(--border-hi); border-radius:24px; padding:38px 44px; text-align:center; max-width:400px; width:92%; }
+.done-icon  { font-size:52px; margin-bottom:14px; }
+.done-title { font-size:26px; font-weight:800; margin-bottom:6px; }
+.done-sub   { font-size:13px; color:var(--muted); font-family:var(--fm); margin-bottom:22px; }
+.done-grid  { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:24px; }
+.done-stat  { background:var(--bg3); border-radius:12px; padding:13px; }
+.done-stat-lbl { font-size:9px; font-family:var(--fm); color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; }
+.done-stat-val { font-size:22px; font-weight:700; font-family:var(--fm); }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="logo">Spine<span>Guard</span></div>
+    <div class="badges">
+      <a href="/api.html" style="font-family:var(--fm);font-size:10px;letter-spacing:.1em;padding:3px 11px;border-radius:20px;border:1px solid var(--border);color:var(--muted);text-decoration:none;transition:all .2s;text-transform:uppercase;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">API Docs ↗</a>
+      <button class="mode-toggle-btn" id="mode-toggle-btn" onclick="toggleMode()" title="Switch data source">
+        <span id="mode-icon">⬡</span>
+        <span id="mode-label">DB Mode</span>
+      </button>
+      <div class="badge db-ok" id="db-badge">MongoDB</div>
+      <div class="badge" id="conn-badge">Connecting</div>
+    </div>
+  </header>
+
+  <!-- ══ PATIENT CARD ═══════════════════════════════════════ -->
+  <div class="patient-card" id="patient-card">
+    <div class="patient-left">
+      <div class="patient-avatar" id="patient-avatar">U1</div>
+      <div class="patient-info">
+        <!-- Display mode -->
+        <div id="display-mode">
+          <div class="patient-name-display" id="patient-name-display">Loading…</div>
+          <div class="patient-sub" id="patient-sub">Patient</div>
+        </div>
+        <!-- Edit mode (hidden by default) -->
+        <div id="edit-mode" style="display:none">
+          <div class="name-edit-wrap">
+            <input class="name-input" id="name-input" type="text" placeholder="Patient name" maxlength="40">
+            <button class="btn-icon confirm" title="Save" onclick="confirmNameEdit()">✓</button>
+            <button class="btn-icon cancel"  title="Cancel" onclick="cancelNameEdit()">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="patient-right">
+      <!-- Sensor status indicator -->
+      <div class="sensor-status idle" id="sensor-status">Sensor idle</div>
+
+      <!-- Patient dropdown -->
+      <div class="patient-select-wrap">
+        <select class="patient-select" id="patient-select" onchange="onPatientSelect(this.value)">
+          <option value="">Loading patients…</option>
+        </select>
+        <span class="select-arrow">▾</span>
+      </div>
+
+      <!-- Add new patient button -->
+      <button class="btn-icon" id="add-patient-btn" title="Add new patient" onclick="toggleAddPanel()" style="color:var(--accent);border-color:rgba(74,158,255,.3);">+</button>
+
+      <!-- Edit name button (hidden during session) -->
+      <button class="btn-icon" id="edit-btn" title="Edit name" onclick="startNameEdit()">✎</button>
+    </div>
+  </div>
+
+  <!-- ══ ADD PATIENT PANEL ════════════════════════════════ -->
+  <div class="add-patient-panel" id="add-patient-panel">
+    <div class="add-patient-inner">
+      <div class="add-patient-title">
+        New Patient
+        <button class="add-patient-close" onclick="toggleAddPanel()" title="Close">✕</button>
+      </div>
+      <div class="ap-fields">
+        <div class="ap-field">
+          <label class="ap-label">Full Name <span style="color:var(--bad)">*</span></label>
+          <input class="ap-input" id="ap-name" type="text" placeholder="e.g. Tunde Okafor" maxlength="60" oninput="clearApErr()">
+        </div>
+        <div class="ap-field">
+          <label class="ap-label">Patient ID <span style="color:var(--bad)">*</span></label>
+          <input class="ap-input" id="ap-id" type="text" placeholder="e.g. PT002" maxlength="20" oninput="clearApErr()">
+        </div>
+        <div class="ap-field">
+          <label class="ap-label">Age</label>
+          <input class="ap-input" id="ap-age" type="number" placeholder="e.g. 34" min="1" max="120">
+        </div>
+        <div class="ap-field">
+          <label class="ap-label">Doctor</label>
+          <input class="ap-input" id="ap-doctor" type="text" placeholder="e.g. Dr. Adeyemi" maxlength="60">
+        </div>
+      </div>
+      <div class="ap-actions">
+        <button class="ap-btn save" id="ap-save-btn" onclick="saveNewPatient()">Save Patient</button>
+        <button class="ap-btn clear" onclick="clearApForm()">Clear</button>
+      </div>
+      <div class="ap-feedback" id="ap-feedback"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- ══ SPINE PANEL ══════════════════════════════════════ -->
+    <div class="spine-panel" id="spine-panel">
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="c3d"></canvas>
+
+        <!-- Idle overlay — shown until session starts -->
+        <div class="spine-idle-overlay" id="idle-overlay">
+          <div class="idle-icon">◎</div>
+          <div class="idle-txt">Select patient · start session</div>
+        </div>
+
+        <div class="hud">
+          <div class="hud-top">
+            <div class="hud-angle">
+              <div class="hud-lbl">Pitch θ</div>
+              <div class="hud-val" id="hud-pitch">—</div>
+              <div class="mode-pill" id="mode-pill">Waiting</div>
+            </div>
+            <div class="hud-angle" style="align-items:flex-end">
+              <div class="hud-lbl">Roll φ</div>
+              <div class="hud-val roll-val" id="hud-roll">—</div>
+            </div>
+          </div>
+          <div class="hud-bot">
+            <div class="hud-region">C · T · L</div>
+            <div class="hud-hint">drag to orbit</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="spine-strip">
+        <div class="pr-box"><div class="pr-lbl">Pitch θ</div><div class="pr-val" id="pr-pitch">—</div></div>
+        <div class="pr-box"><div class="pr-lbl">Roll φ</div><div class="pr-val" id="pr-roll">—</div></div>
+        <div class="pr-box"><div class="pr-lbl">Status</div><div class="pr-val" id="pr-status" style="font-size:13px">—</div></div>
+      </div>
+      <div class="last-read" id="last-read">Last reading: <span>—</span></div>
+    </div>
+
+    <!-- ══ RIGHT COLUMN ═════════════════════════════════════ -->
+    <div class="right-col">
+
+      <div class="timer-card">
+        <div class="card-lbl">Time Remaining</div>
+        <div class="timer-num" id="timer">—</div>
+        <div class="prog-track"><div class="prog-fill" id="prog"></div></div>
+      </div>
+
+      <!-- Duration picker -->
+      <div class="dur-card" id="dur-card">
+        <div class="card-lbl" style="margin-bottom:12px">Session Duration</div>
+        <div class="dur-presets" id="dur-presets">
+          <button class="dur-btn" data-secs="10"   onclick="pickDur(10)">10 sec</button>
+          <button class="dur-btn" data-secs="30"   onclick="pickDur(30)">30 sec</button>
+          <button class="dur-btn" data-secs="300"  onclick="pickDur(300)">5 min</button>
+          <button class="dur-btn" data-secs="600"  onclick="pickDur(600)">10 min</button>
+          <button class="dur-btn" data-secs="900"  onclick="pickDur(900)">15 min</button>
+          <button class="dur-btn" data-secs="1800" onclick="pickDur(1800)">30 min</button>
+          <button class="dur-btn" data-secs="2700" onclick="pickDur(2700)">45 min</button>
+          <button class="dur-btn" data-secs="3600" onclick="pickDur(3600)">60 min</button>
+          <button class="dur-btn" data-secs="60"   onclick="pickDur(60)">1 min</button>
+          <button class="dur-btn" data-secs="custom" onclick="toggleCustom()">Custom</button>
+        </div>
+        <div class="dur-custom" id="dur-custom-row" style="display:none">
+          <label>Custom</label>
+          <input type="range" id="dur-slider" min="10" max="3600" value="2700" step="10" oninput="onDurSlider(this.value)">
+          <span class="dur-custom-val" id="dur-custom-val">45:00</span>
+        </div>
+        <div class="dur-selected">Selected: <strong id="dur-display">45 min (2700s)</strong></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat"><div class="stat-lbl">Slouch Events</div><div class="stat-val bad"    id="s-slouch">0</div></div>
+        <div class="stat"><div class="stat-lbl">Good Time</div>    <div class="stat-val good"   id="s-good">0:00</div></div>
+        <div class="stat"><div class="stat-lbl">Slouch Time</div>  <div class="stat-val"        id="s-bad" style="color:var(--muted)">0:00</div></div>
+        <div class="stat"><div class="stat-lbl">Score</div>        <div class="stat-val accent" id="s-score">—</div></div>
+      </div>
+
+      <div class="controls" id="ctrl-wrap">
+        <button class="btn primary" id="start-btn" onclick="startSession()">▶ Start Session</button>
+        <button class="btn reset" id="reset-btn" onclick="resetSession()" title="Reset stats and timer">↺ Reset</button>
+      </div>
+
+      <div class="ticker-wrap">
+        <div class="ticker-lbl">Doctor Comments</div>
+        <div class="ticker-scroll" id="ticker"><span>Loading…</span></div>
+      </div>
+
+      <div class="sim-bar">
+        <div class="sim-row">
+          <span class="sim-lbl">Pitch</span>
+          <input type="range" min="-45" max="45" value="0" step="1" id="sim-pitch" oninput="sim()">
+          <span class="sim-v" id="sv-pitch">0°</span>
+        </div>
+        <div class="sim-row">
+          <span class="sim-lbl">Roll</span>
+          <input type="range" min="-30" max="30" value="0" step="1" id="sim-roll" oninput="sim()">
+          <span class="sim-v" id="sv-roll">0°</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Session complete overlay -->
+<div class="overlay" id="overlay">
+  <div class="done-card">
+    <div class="done-icon" id="done-icon">✅</div>
+    <div class="done-title" id="done-title">Session Complete</div>
+    <div class="done-sub"   id="done-sub">Saved to MongoDB</div>
+    <div class="done-grid"  id="done-grid"></div>
+    <button class="btn primary" style="width:100%;flex:none" onclick="closeOverlay()">Close</button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   THREE.JS 3D SPINE
+════════════════════════════════════════════════════════════ */
+(function initSpine3D() {
+  const canvas = document.getElementById('c3d');
+  const wrap   = document.getElementById('canvas-wrap');
+
+  const C_GOOD = new THREE.Color(0x1fba87);
+  const C_BAD  = new THREE.Color(0xf05050);
+  const C_CORD = new THREE.Color(0x4a9eff);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x0a0c10, 1);
+  renderer.shadowMap.enabled = true;
+
+  const scene = new THREE.Scene();
+  scene.fog   = new THREE.FogExp2(0x0a0c10, 0.042);
+
+  const camera = new THREE.PerspectiveCamera(44, 1, 0.1, 80);
+  camera.position.set(0, 0, 10);
+
+  function resize() {
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  resize();
+  new ResizeObserver(resize).observe(wrap);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(4,6,5); key.castShadow = true; scene.add(key);
+  const rimL2 = new THREE.DirectionalLight(0x4a9eff,0.3); scene.add(rimL2);
+  const rimL = new THREE.DirectionalLight(0x4a9eff,0.3); rimL.position.set(-5,-3,-4); scene.add(rimL);
+  const fill = new THREE.PointLight(0x1fba87,0.5,20); fill.position.set(-3,2,3); scene.add(fill);
+
+  const mVert  = new THREE.MeshStandardMaterial({color:C_GOOD,roughness:.35,metalness:.15});
+  const mDisc  = new THREE.MeshStandardMaterial({color:0x1e2a45,roughness:.7,metalness:0,transparent:true,opacity:.82});
+  const mCord  = new THREE.MeshStandardMaterial({color:C_CORD,roughness:.25,metalness:.5,emissive:C_CORD,emissiveIntensity:.18});
+  const mSkull = new THREE.MeshStandardMaterial({color:0x2a3d5c,roughness:.5,metalness:.2,transparent:true,opacity:.72});
+  const mGhost = new THREE.MeshStandardMaterial({color:0x1fba87,wireframe:true,transparent:true,opacity:.07});
+  const mSac   = new THREE.MeshStandardMaterial({color:0x1c2d46,roughness:.55,metalness:.1});
+
+  function mkVert(r,h,sl) {
+    const g = new THREE.Group();
+    g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.04,h,12),mVert),{castShadow:true}));
+    const tp = new THREE.Mesh(new THREE.BoxGeometry(r*2.7,h*.38,r*.48),mVert); tp.castShadow=true; g.add(tp);
+    const sp = new THREE.Mesh(new THREE.BoxGeometry(r*.42,h*.34,sl),mVert);
+    sp.position.z=-(r*.5+sl*.5); sp.castShadow=true; g.add(sp);
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(r*.27,r*.27,h+.01,8),new THREE.MeshStandardMaterial({color:0x04060a,roughness:1})));
+    return g;
+  }
+
+  const DEFS = [
+    [.30,.28,.30,.10],[.31,.30,.32,.10],[.32,.31,.33,.11],[.33,.32,.34,.11],
+    [.34,.32,.34,.11],[.35,.33,.35,.12],[.36,.33,.36,.12],
+    [.37,.34,.48,.09],[.38,.35,.50,.09],[.39,.35,.52,.09],[.40,.36,.53,.09],
+    [.41,.36,.54,.09],[.41,.36,.54,.09],[.42,.37,.55,.09],[.43,.37,.55,.10],
+    [.44,.37,.54,.10],[.45,.38,.52,.10],[.46,.38,.50,.10],
+    [.52,.46,.40,.14],[.54,.47,.40,.14],[.55,.48,.40,.14],[.55,.48,.38,.13],[.54,.46,.34,.13],
+  ];
+
+  const spineGroup = new THREE.Group();
+  const ghostGroup = new THREE.Group();
+  scene.add(spineGroup,ghostGroup);
+  const vertMeshes = [];
+  let yPos = 6.9;
+
+  DEFS.forEach(([r,h,sl,dh],i) => {
+    const v = mkVert(r,h,sl); v.position.y=yPos; yPos-=h;
+    spineGroup.add(v); vertMeshes.push(v);
+    const gv = mkVert(r,h,sl); gv.position.y=v.position.y;
+    gv.traverse(c=>{if(c.isMesh) c.material=mGhost.clone();}); ghostGroup.add(gv);
+    if (i < DEFS.length-1) {
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(r*.9,r*.9,dh,12),mDisc);
+      disc.position.y=yPos+dh*.5; yPos-=dh; spineGroup.add(disc);
+      const gd=disc.clone(); gd.traverse(c=>{if(c.isMesh)c.material=mGhost.clone();}); ghostGroup.add(gd);
+    }
+  });
+
+  const sacrum = new THREE.Mesh(new THREE.CylinderGeometry(.62,.46,.95,10),mSac);
+  sacrum.position.y=yPos-.46; sacrum.scale.z=.72; spineGroup.add(sacrum);
+  const gSac=sacrum.clone(); gSac.traverse(c=>{if(c.isMesh)c.material=mGhost.clone();}); ghostGroup.add(gSac);
+
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(.74,16,12),mSkull);
+  skull.scale.set(1,1.26,1.08); skull.position.y=7.7; spineGroup.add(skull);
+  const gSkull=skull.clone(); gSkull.traverse(c=>{if(c.isMesh)c.material=mGhost.clone();}); ghostGroup.add(gSkull);
+
+  const cord = new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,13.6,8),mCord);
+  cord.position.set(0,.8,-.09); spineGroup.add(cord);
+
+  spineGroup.position.y = -6.9*.5;
+
+  const arcMat = new THREE.LineBasicMaterial({color:0x4a9eff,transparent:true,opacity:.45});
+  let arcLine = null;
+  function drawArc(pitch) {
+    if(arcLine){scene.remove(arcLine);arcLine=null;}
+    if(Math.abs(pitch)<1) return;
+    const r=4, rad=pitch*Math.PI/180, pts=[];
+    for(let i=0;i<=18;i++){const a=(i/18)*rad; pts.push(new THREE.Vector3(Math.sin(a)*r,6.9-Math.cos(a)*r+r,0));}
+    arcLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),arcMat); scene.add(arcLine);
+  }
+
+  let drag=false, px=0, py=0, oY=0, oX=0;
+  const el=document.getElementById('canvas-wrap');
+  el.addEventListener('mousedown',e=>{drag=true;px=e.clientX;py=e.clientY;});
+  window.addEventListener('mouseup',()=>drag=false);
+  window.addEventListener('mousemove',e=>{if(!drag)return;oY+=(e.clientX-px)*.009;px=e.clientX;oX=Math.max(-.65,Math.min(.65,oX+(e.clientY-py)*.005));py=e.clientY;});
+  el.addEventListener('touchstart',e=>{drag=true;px=e.touches[0].clientX;py=e.touches[0].clientY;},{passive:true});
+  window.addEventListener('touchend',()=>drag=false);
+  window.addEventListener('touchmove',e=>{if(!drag)return;oY+=(e.touches[0].clientX-px)*.009;px=e.touches[0].clientX;oX=Math.max(-.65,Math.min(.65,oX+(e.touches[0].clientY-py)*.005));py=e.touches[0].clientY;},{passive:true});
+
+  let tPitch=0, tRoll=0, cPitch=0, cRoll=0;
+  window.setSpinePosture = (pitch,roll)=>{tPitch=pitch;tRoll=roll;};
+
+  const clock = new THREE.Clock();
+  (function loop(){
+    requestAnimationFrame(loop);
+    const dt=clock.getDelta();
+    cPitch+=(tPitch-cPitch)*Math.min(1,dt*7);
+    cRoll +=(tRoll -cRoll )*Math.min(1,dt*7);
+    spineGroup.rotation.x=cPitch*Math.PI/180;
+    spineGroup.rotation.z=-cRoll*Math.PI/180;
+    camera.position.x=Math.sin(oY)*10;
+    camera.position.z=Math.cos(oY)*10;
+    camera.position.y=oX*-5;
+    camera.lookAt(0,0,0);
+    if(!drag) ghostGroup.rotation.y+=dt*.07;
+    const isBad=Math.abs(cPitch)>15;
+    mVert.color.set(isBad?C_BAD:C_GOOD);
+    mCord.emissive.set(isBad?C_BAD:C_CORD);
+    mCord.emissiveIntensity=isBad?.38:.18;
+    fill.color.set(isBad?0xf05050:0x1fba87);
+    drawArc(cPitch);
+    renderer.render(scene,camera);
+  })();
+})();
+
+/* ════════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════════ */
+// ── Pusher real-time connection ──────────────────────────────────
+Pusher.logToConsole = false;
+var _cfg    = window.SG_CONFIG || {};
+var _api    = (_cfg.API_BASE_URL || '').replace(/\/$/, '');
+var pusher  = new Pusher(_cfg.PUSHER_KEY || '', {
+  cluster      : _cfg.PUSHER_CLUSTER || 'eu',
+  authEndpoint : _api + '/api/pusher/auth',
+});
+var channel = pusher.subscribe('spineguard');
+
+var chosenDuration    = 2700;
+var sessionTotal      = 2700;
+var sessionActive     = false;
+var addPanelOpen      = false;
+var activePatientId   = 'User1';
+var activePatientName = 'User 1';
+var patients          = [];
+var editingName       = false;
+var dataMode          = 'db';    // 'db' = live MongoDB readings | 'sim' = sliders only
+
+/* ════════════════════════════════════════════════════════════
+   MODE TOGGLE  (DB Mode ↔ Sim Mode)
+════════════════════════════════════════════════════════════ */
+function toggleMode() {
+  dataMode = dataMode === 'db' ? 'sim' : 'db';
+  applyModeUI();
+  // On Vercel, mode is client-side only — no persistent server to notify
+}
+
+function applyModeUI() {
+  const btn   = document.getElementById('mode-toggle-btn');
+  const icon  = document.getElementById('mode-icon');
+  const label = document.getElementById('mode-label');
+  const simBar = document.querySelector('.sim-bar');
+
+  if (dataMode === 'sim') {
+    btn.className   = 'mode-toggle-btn sim-mode';
+    icon.textContent  = '◈';
+    label.textContent = 'Sim Mode';
+    // Highlight sim bar so user knows it's active
+    simBar.style.borderColor = 'rgba(245,200,66,.4)';
+    simBar.style.background  = 'rgba(245,200,66,.05)';
+  } else {
+    btn.className   = 'mode-toggle-btn db-mode';
+    icon.textContent  = '⬡';
+    label.textContent = 'DB Mode';
+    simBar.style.borderColor = '';
+    simBar.style.background  = '';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   PATIENT MANAGEMENT
+════════════════════════════════════════════════════════════ */
+
+// Load all patients from MongoDB and populate the dropdown
+async function loadPatients() {
+  try {
+    const res  = await fetch(_api + '/api/patients?limit=100');
+    const data = await res.json();
+    patients   = data.data || [];
+
+    const sel = document.getElementById('patient-select');
+    sel.innerHTML = patients.map(p =>
+      `<option value="${p.patientId}">${p.name}</option>`
+    ).join('');
+
+    // If current activePatientId is in the list, select it; else pick first
+    const match = patients.find(p => p.patientId === activePatientId);
+    if (match) {
+      sel.value = activePatientId;
+      renderPatientCard(match);
+    } else if (patients.length) {
+      sel.value = patients[0].patientId;
+      setActivePatient(patients[0]);
+    }
+  } catch (_) {
+    document.getElementById('patient-select').innerHTML = '<option value="User1">User 1</option>';
+    renderPatientCard({ name:'User 1', patientId:'User1', doctor:'—' });
+  }
+}
+
+function onPatientSelect(patientId) {
+  if (sessionActive) return; // locked during session
+  const p = patients.find(p => p.patientId === patientId);
+  if (p) setActivePatient(p);
+}
+
+function setActivePatient(p) {
+  activePatientId   = p.patientId;
+  activePatientName = p.name;
+  renderPatientCard(p);
+}
+
+function renderPatientCard(p) {
+  // Avatar initials — take up to 2 words
+  const parts    = (p.name || '?').trim().split(/\s+/);
+  const initials = parts.length >= 2
+    ? parts[0][0] + parts[1][0]
+    : parts[0].substring(0,2);
+  document.getElementById('patient-avatar').textContent       = initials.toUpperCase();
+  document.getElementById('patient-name-display').textContent = p.name;
+  document.getElementById('patient-sub').textContent          =
+    (p.doctor ? p.doctor + ' · ' : '') + p.patientId;
+}
+
+// ── Inline name editor ─────────────────────────────────────
+function startNameEdit() {
+  if (sessionActive || editingName) return;
+  editingName = true;
+  const inp   = document.getElementById('name-input');
+  inp.value   = activePatientName;
+  document.getElementById('display-mode').style.display = 'none';
+  document.getElementById('edit-mode').style.display    = 'flex';
+  document.getElementById('edit-btn').style.display     = 'none';
+  document.getElementById('patient-select').style.display = 'none';
+  inp.focus();
+  inp.select();
+}
+
+async function confirmNameEdit() {
+  const inp  = document.getElementById('name-input');
+  const name = inp.value.trim();
+  if (!name) { cancelNameEdit(); return; }
+
+  try {
+    const res = await fetch(`/api/patients/${activePatientId}`, {
+      method  : 'PATCH',
+      headers : { 'Content-Type':'application/json' },
+      body    : JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const updated = data.data;
+      // Update local list
+      const idx = patients.findIndex(p => p.patientId === activePatientId);
+      if (idx !== -1) patients[idx] = updated;
+      setActivePatient(updated);
+      // Refresh dropdown label
+      const opt = document.querySelector(`#patient-select option[value="${activePatientId}"]`);
+      if (opt) opt.textContent = name;
+    }
+  } catch (_) {}
+
+  exitNameEdit();
+}
+
+function cancelNameEdit() { exitNameEdit(); }
+
+function exitNameEdit() {
+  editingName = false;
+  document.getElementById('display-mode').style.display   = '';
+  document.getElementById('edit-mode').style.display      = 'none';
+  document.getElementById('edit-btn').style.display       = '';
+  document.getElementById('patient-select').style.display = '';
+}
+
+// Enter key confirms, Escape cancels
+document.getElementById('name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter')  confirmNameEdit();
+  if (e.key === 'Escape') cancelNameEdit();
+});
+
+// ── Lock/unlock patient UI during session ──────────────────
+function lockPatientUI(locked) {
+  document.getElementById('patient-select').disabled = locked;
+  document.getElementById('edit-btn').style.opacity  = locked ? '.3' : '1';
+  document.getElementById('edit-btn').style.pointerEvents = locked ? 'none' : '';
+  document.getElementById('add-patient-btn').style.opacity = locked ? '.3' : '1';
+  document.getElementById('add-patient-btn').style.pointerEvents = locked ? 'none' : '';
+  if (locked) closeAddPanel();
+  document.getElementById('patient-card').classList.toggle('locked', locked);
+}
+
+/* ════════════════════════════════════════════════════════════
+   ADD PATIENT PANEL
+════════════════════════════════════════════════════════════ */
+function toggleAddPanel() {
+  if (sessionActive) return;
+  addPanelOpen = !addPanelOpen;
+  document.getElementById('add-patient-panel').classList.toggle('open', addPanelOpen);
+  const btn = document.getElementById('add-patient-btn');
+  btn.textContent     = addPanelOpen ? '−' : '+';
+  btn.style.color     = addPanelOpen ? 'var(--bad)'  : 'var(--accent)';
+  btn.style.borderColor = addPanelOpen ? 'rgba(240,80,80,.3)' : 'rgba(74,158,255,.3)';
+  if (addPanelOpen) setTimeout(() => document.getElementById('ap-name').focus(), 350);
+}
+
+function closeAddPanel() {
+  addPanelOpen = false;
+  document.getElementById('add-patient-panel').classList.remove('open');
+  const btn = document.getElementById('add-patient-btn');
+  btn.textContent       = '+';
+  btn.style.color       = 'var(--accent)';
+  btn.style.borderColor = 'rgba(74,158,255,.3)';
+}
+
+function clearApForm() {
+  ['ap-name','ap-id','ap-age','ap-doctor'].forEach(id => {
+    document.getElementById(id).value = '';
+    document.getElementById(id).classList.remove('required-err');
+  });
+  document.getElementById('ap-feedback').textContent = '';
+  document.getElementById('ap-feedback').className   = 'ap-feedback';
+  document.getElementById('ap-save-btn').disabled    = false;
+}
+
+function clearApErr() {
+  document.getElementById('ap-feedback').textContent = '';
+  document.getElementById('ap-feedback').className   = 'ap-feedback';
+  ['ap-name','ap-id'].forEach(id => document.getElementById(id).classList.remove('required-err'));
+}
+
+async function saveNewPatient() {
+  const name   = document.getElementById('ap-name').value.trim();
+  const pid    = document.getElementById('ap-id').value.trim().replace(/\s+/g,'');
+  const age    = document.getElementById('ap-age').value;
+  const doctor = document.getElementById('ap-doctor').value.trim();
+  const fb     = document.getElementById('ap-feedback');
+
+  // Validation
+  let hasErr = false;
+  if (!name) { document.getElementById('ap-name').classList.add('required-err'); hasErr = true; }
+  if (!pid)  { document.getElementById('ap-id').classList.add('required-err');   hasErr = true; }
+  if (hasErr) {
+    fb.textContent = 'Name and Patient ID are required.';
+    fb.className   = 'ap-feedback err';
+    return;
+  }
+
+  const saveBtn = document.getElementById('ap-save-btn');
+  saveBtn.disabled    = true;
+  saveBtn.textContent = 'Saving…';
+
+  try {
+    const body = { name, patientId: pid };
+    if (age)    body.age    = parseInt(age);
+    if (doctor) body.doctor = doctor;
+
+    const res  = await fetch('/api/patients', {
+      method  : 'POST',
+      headers : { 'Content-Type': 'application/json' },
+      body    : JSON.stringify(body),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      // Add to local list and dropdown
+      patients.push(data);
+      const opt = document.createElement('option');
+      opt.value       = data.patientId;
+      opt.textContent = data.name;
+      document.getElementById('patient-select').appendChild(opt);
+
+      // Auto-switch to the new patient
+      document.getElementById('patient-select').value = data.patientId;
+      setActivePatient(data);
+
+      fb.textContent = `✓ ${data.name} added and selected.`;
+      fb.className   = 'ap-feedback ok';
+
+      // Auto-close panel after 1.4s
+      setTimeout(() => { clearApForm(); closeAddPanel(); }, 1400);
+    } else {
+      // Server error (e.g. duplicate patientId)
+      fb.textContent = data.error || 'Failed to save patient.';
+      fb.className   = 'ap-feedback err';
+      if (data.error?.toLowerCase().includes('patienti')) {
+        document.getElementById('ap-id').classList.add('required-err');
+      }
+      saveBtn.disabled    = false;
+      saveBtn.textContent = 'Save Patient';
+    }
+  } catch (e) {
+    fb.textContent   = 'Network error — check server connection.';
+    fb.className     = 'ap-feedback err';
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Patient';
+  }
+}
+
+// Enter key in either required field triggers save
+['ap-name','ap-id'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveNewPatient();
+  });
+});
+
+/* ════════════════════════════════════════════════════════════
+   SENSOR STATUS INDICATOR
+════════════════════════════════════════════════════════════ */
+function setSensorStatus(active) {
+  const el = document.getElementById('sensor-status');
+  if (active) {
+    el.className   = 'sensor-status active';
+    el.textContent = 'Sensor live';
+  } else {
+    el.className   = 'sensor-status idle';
+    el.textContent = 'Sensor idle';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   SPINE IDLE OVERLAY
+════════════════════════════════════════════════════════════ */
+function setSpineActive(active) {
+  document.getElementById('idle-overlay').classList.toggle('hidden', active);
+}
+
+/* ════════════════════════════════════════════════════════════
+   DURATION PICKER
+════════════════════════════════════════════════════════════ */
+function fmtDur(s)     { if(s<60) return s+'s'; const m=Math.floor(s/60),r=s%60; return r?`${m}m ${r}s`:`${m} min`; }
+function fmtDurLong(s) { if(s<60) return `${s} sec (${s}s)`; const m=Math.floor(s/60),r=s%60; return r?`${m}m ${r}s (${s}s)`:`${m} min (${s}s)`; }
+function fmtTimer(s)   { s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; if(h>0) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; return `${m}:${String(sec).padStart(2,'0')}`; }
+
+function setChosenDuration(secs) {
+  chosenDuration = Math.max(10,Math.min(3600,secs));
+  document.getElementById('dur-display').textContent = fmtDurLong(chosenDuration);
+  document.querySelectorAll('.dur-btn').forEach(b => b.classList.toggle('active', b.dataset.secs == chosenDuration));
+  document.getElementById('dur-slider').value = chosenDuration;
+  document.getElementById('dur-custom-val').textContent = fmtTimer(chosenDuration);
+  // Keep timer preview in sync when not in a session
+  if (!sessionActive) {
+    document.getElementById('timer').textContent = fmtTimer(chosenDuration);
+  }
+}
+
+function pickDur(secs) {
+  if (secs === 'custom') { toggleCustom(); return; }
+  document.getElementById('dur-custom-row').style.display = 'none';
+  setChosenDuration(secs);
+}
+
+function toggleCustom() {
+  const row = document.getElementById('dur-custom-row');
+  const vis = row.style.display === 'none';
+  row.style.display = vis ? 'flex' : 'none';
+  document.querySelectorAll('.dur-btn').forEach(b => {
+    if (b.dataset.secs==='custom') b.classList.toggle('active',vis);
+    else b.classList.remove('active');
+  });
+}
+
+function onDurSlider(v) {
+  const s = parseInt(v);
+  document.getElementById('dur-custom-val').textContent = fmtTimer(s);
+  chosenDuration = s;
+  document.getElementById('dur-display').textContent = fmtDurLong(s);
+  document.querySelectorAll('.dur-btn[data-secs]').forEach(b => {
+    b.classList.toggle('active', b.dataset.secs==s && b.dataset.secs!=='custom');
+  });
+}
+
+function lockDurPicker(locked) {
+  document.querySelectorAll('.dur-btn').forEach(b => b.disabled = locked);
+  document.getElementById('dur-slider').disabled = locked;
+  document.getElementById('dur-card').style.opacity = locked ? '.5' : '1';
+}
+
+setChosenDuration(2700);
+
+/* ════════════════════════════════════════════════════════════
+   SOCKET.IO
+════════════════════════════════════════════════════════════ */
+// ── Pusher connection state ────────────────────────────────────
+pusher.connection.bind('connected', function() {
+  document.getElementById('conn-badge').textContent = 'Live';
+  document.getElementById('conn-badge').className   = 'badge live';
+  // On connect, check if a session is already in progress
+  syncServerState();
+});
+pusher.connection.bind('disconnected', function() {
+  document.getElementById('conn-badge').textContent = 'Offline';
+  document.getElementById('conn-badge').className   = 'badge err';
+  setSensorStatus(false);
+});
+pusher.connection.bind('error', function() {
+  document.getElementById('conn-badge').textContent = 'Error';
+  document.getElementById('conn-badge').className   = 'badge err';
+});
+
+// Fetch current server state on load / reconnect
+async function syncServerState() {
+  try {
+    // Check for active session
+    var res = await fetch(_api + '/api/sessions/active');
+    var sess = await res.json();
+    if (sess && sess.status === 'In Progress') {
+      sessionActive   = true;
+      sessionId       = String(sess._id);
+      sessionTotal    = sess.plannedDuration;
+      var elapsed     = Math.floor((Date.now() - new Date(sess.startTime).getTime()) / 1000);
+      var remaining   = Math.max(0, sess.plannedDuration - elapsed);
+      renderControls(true);
+      lockDurPicker(true);
+      lockPatientUI(true);
+      setSensorStatus(true);
+      setSpineActive(true);
+      document.getElementById('timer').textContent = fmtTimer(remaining);
+      startClientTimer(remaining, sess.plannedDuration, elapsed);
+    } else {
+      document.getElementById('timer').textContent = fmtTimer(chosenDuration);
+      setSensorStatus(false);
+      setSpineActive(false);
+    }
+    // Latest reading
+    var rRes = await fetch(_api + '/api/readings/latest');
+    var rd   = await rRes.json();
+    if (rd) {
+      window.setSpinePosture(rd.pitch, rd.roll);
+      document.getElementById('last-read').querySelector('span').textContent =
+        new Date(rd.recordedAt || rd.createdAt).toLocaleTimeString();
+    }
+  } catch(_) {}
+}
+
+// Posture data via Pusher (ESP32 → POST /api/readings → Pusher trigger → browser)
+channel.bind('posture', function(data) {
+  if (!sessionActive) return;
+  if (dataMode !== 'db') return;
+  applyPosture(data.pitch, data.roll, data.mode);
+  document.getElementById('last-read').querySelector('span').textContent =
+    new Date().toLocaleTimeString();
+});
+
+// Timer is client-side on Vercel (no persistent server process)
+// See startClientTimer() below
+
+channel.bind('session-started', function(data) {
+  sessionActive = true;
+  sessionId     = data.sessionId;
+  sessionTotal  = data.sessionDuration;
+  renderControls(true);
+  lockDurPicker(true);
+  lockPatientUI(true);
+  setSensorStatus(true);
+  setSpineActive(true);
+  document.getElementById('prog').style.width  = '0%';
+  document.getElementById('timer').textContent = fmtTimer(data.sessionDuration);
+  // Start the client-side countdown
+  startClientTimer(data.sessionDuration, data.sessionDuration, 0);
+});
+
+channel.bind('session-done', function(data) {
+  clearClientTimer();
+  sessionActive = false;
+  renderControls(false);
+  lockDurPicker(false);
+  lockPatientUI(false);
+  setSensorStatus(false);
+  setSpineActive(false);
+  document.getElementById('timer').textContent = fmtTimer(chosenDuration);
+  document.getElementById('prog').style.width  = '0%';
+  showDone(data);
+});
+
+/* ════════════════════════════════════════════════════════════
+   POSTURE UI
+════════════════════════════════════════════════════════════ */
+function applyPosture(pitch, roll, mode) {
+  const theta = parseFloat(pitch);
+  const phi   = parseFloat(roll);
+  const isBad = mode==='bad' || Math.abs(theta)>15;
+
+  window.setSpinePosture(theta, phi);
+
+  document.getElementById('hud-pitch').textContent = Math.abs(theta).toFixed(1)+'°';
+  document.getElementById('hud-pitch').className   = 'hud-val'+(isBad?' bad':'');
+  document.getElementById('hud-roll').textContent  = phi.toFixed(1)+'°';
+
+  const pill = document.getElementById('mode-pill');
+  pill.textContent = isBad ? '⚠ Slouch' : '✓ Good';
+  pill.className   = 'mode-pill'+(isBad?' bad':'');
+
+  document.getElementById('spine-panel').classList.toggle('bad', isBad);
+  document.getElementById('pr-pitch').textContent = theta.toFixed(1)+'°';
+  document.getElementById('pr-pitch').style.color = isBad?'var(--bad)':'var(--good)';
+  document.getElementById('pr-roll').textContent  = phi.toFixed(1)+'°';
+  document.getElementById('pr-status').textContent = isBad ? 'Slouching' : 'Upright';
+  document.getElementById('pr-status').style.color = isBad?'var(--bad)':'var(--good)';
+}
+
+/* ════════════════════════════════════════════════════════════
+   SESSION CONTROLS
+════════════════════════════════════════════════════════════ */
+// ── Client-side timer (replaces server setInterval) ──────────────
+var clientTimerInterval = null;
+var clientElapsed     = 0;
+var clientGoodSecs    = 0;
+var clientBadSecs     = 0;
+var clientSlouches    = 0;
+var clientLastMode    = 'good';
+var clientPeakPitch   = 0;
+var sessionId         = null;
+
+function startClientTimer(remaining, total, startElapsed) {
+  clearClientTimer();
+  clientElapsed   = startElapsed || 0;
+  clientTimerInterval = setInterval(async function() {
+    clientElapsed++;
+    var rem   = Math.max(0, total - clientElapsed);
+    var mode  = (parseFloat(document.getElementById('pr-pitch').textContent) || 0);
+    var isBad = Math.abs(mode) > 15;
+    if (isBad) clientBadSecs++; else clientGoodSecs++;
+    if (isBad && clientLastMode === 'good') clientSlouches++;
+    clientLastMode = isBad ? 'bad' : 'good';
+
+    var score = clientElapsed > 0 ? Math.round((clientGoodSecs / clientElapsed) * 100) : 0;
+    var pct   = ((total - rem) / total) * 100;
+
+    document.getElementById('timer').textContent    = fmtTimer(rem);
+    document.getElementById('timer').className      = 'timer-num' + (rem < 10 ? ' urgent' : '');
+    document.getElementById('prog').style.width     = pct.toFixed(1) + '%';
+    document.getElementById('prog').className       = 'prog-fill' + (rem < 10 ? ' bad' : '');
+    document.getElementById('s-slouch').textContent = clientSlouches;
+    document.getElementById('s-good').textContent   = fmtTimer(clientGoodSecs);
+    document.getElementById('s-bad').textContent    = fmtTimer(clientBadSecs);
+    document.getElementById('s-score').textContent  = score + '%';
+
+    // Checkpoint save every 30s
+    if (clientElapsed % 30 === 0 && sessionId) {
+      fetch('/api/sessions/' + sessionId, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: 'checkpoint' }),
+      }).catch(function(){});
+    }
+
+    if (rem <= 0) {
+      clearClientTimer();
+      completeSession('Completed');
+    }
+  }, 1000);
+}
+
+function clearClientTimer() {
+  clearInterval(clientTimerInterval);
+  clientTimerInterval = null;
+  clientElapsed = clientGoodSecs = clientBadSecs = clientSlouches = clientPeakPitch = 0;
+  clientLastMode = 'good';
+}
+
+async function completeSession(status) {
+  if (!sessionId) return;
+  try {
+    var res = await fetch('/api/sessions/stop', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({
+        elapsed    : clientElapsed,
+        goodSeconds: clientGoodSecs,
+        badSeconds : clientBadSecs,
+        slouchCount: clientSlouches,
+        peakPitch  : clientPeakPitch,
+        status,
+      }),
+    });
+    // session-done Pusher event will fire and update the UI
+  } catch(e) {
+    console.error('Stop session failed:', e.message);
+  }
+}
+
+async function startSession() {
+  try {
+    var res  = await fetch('/api/sessions/start', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ patientId: activePatientId, duration: chosenDuration }),
+    });
+    var data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Failed to start session');
+      return;
+    }
+    // Pusher session-started event will fire and update UI
+  } catch(e) { alert('Network error: ' + e.message); }
+}
+
+async function endSession() {
+  await completeSession('Manual Stop');
+}
+
+function renderControls(active) {
+  document.getElementById('ctrl-wrap').innerHTML = active
+    ? `<button class="btn danger" onclick="endSession()">■ End Session</button>
+       <button class="btn reset" onclick="resetSession()" title="Reset stats and timer">↺ Reset</button>`
+    : `<button class="btn primary" onclick="startSession()">▶ Start Session</button>
+       <button class="btn reset" onclick="resetSession()" title="Reset stats and timer">↺ Reset</button>`;
+}
+
+function resetSession() {
+  if (sessionActive) return; // cannot reset during an active session
+  // Reset all stat display elements
+  document.getElementById('s-slouch').textContent = '0';
+  document.getElementById('s-good').textContent   = '0:00';
+  document.getElementById('s-bad').textContent    = '0:00';
+  document.getElementById('s-score').textContent  = '—';
+  // Reset timer display to chosen duration
+  document.getElementById('timer').textContent  = fmtTimer(chosenDuration);
+  document.getElementById('timer').className    = 'timer-num';
+  // Reset progress bar
+  document.getElementById('prog').style.width = '0%';
+  document.getElementById('prog').className   = 'prog-fill';
+  // Reset spine to upright
+  window.setSpinePosture(0, 0);
+  applyPosture(0, 0, 'good');
+  // Reset sim sliders to zero
+  document.getElementById('sim-pitch').value = 0;
+  document.getElementById('sim-roll').value  = 0;
+  document.getElementById('sv-pitch').textContent = '0°';
+  document.getElementById('sv-roll').textContent  = '0°';
+  // Flash the reset button to give feedback
+  var btn = document.querySelector('.btn.reset');
+  if (btn) {
+    var orig = btn.textContent;
+    btn.textContent = '✓ Reset';
+    btn.style.color = 'var(--good)';
+    setTimeout(function() {
+      btn.textContent = '↺ Reset';
+      btn.style.color = '';
+    }, 900);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   SESSION DONE OVERLAY
+════════════════════════════════════════════════════════════ */
+function showDone(d) {
+  const isFlame = d.score >= 80;
+  document.getElementById('done-icon').textContent  = isFlame ? '🔥' : '✅';
+  document.getElementById('done-title').textContent = isFlame ? 'Perfect Session!' : 'Session Complete';
+  document.getElementById('done-sub').textContent   = `${activePatientName} · Saved to MongoDB · ${d.date}`;
+  document.getElementById('done-grid').innerHTML = `
+    <div class="done-stat"><div class="done-stat-lbl">Score</div><div class="done-stat-val" style="color:var(--accent)">${d.score}%</div></div>
+    <div class="done-stat"><div class="done-stat-lbl">Slouch Events</div><div class="done-stat-val" style="color:var(--bad)">${d.slouchCount}</div></div>
+    <div class="done-stat"><div class="done-stat-lbl">Good Time</div><div class="done-stat-val" style="color:var(--good)">${fmtTimer(d.goodSeconds)}</div></div>
+    <div class="done-stat"><div class="done-stat-lbl">Duration</div><div class="done-stat-val">${d.duration}</div></div>
+  `;
+  document.getElementById('overlay').classList.add('show');
+}
+function closeOverlay() { document.getElementById('overlay').classList.remove('show'); }
+
+/* ════════════════════════════════════════════════════════════
+   SIMULATE (dev — bypasses hardware, only works during session)
+════════════════════════════════════════════════════════════ */
+function sim() {
+  var p = parseFloat(document.getElementById('sim-pitch').value);
+  var r = parseFloat(document.getElementById('sim-roll').value);
+  document.getElementById('sv-pitch').textContent = p+'°';
+  document.getElementById('sv-roll').textContent  = r+'°';
+  if (dataMode === 'sim') {
+    applyPosture(p, r, Math.abs(p) > 15 ? 'bad' : 'good');
+    // In sim mode post to the readings API so it also triggers Pusher
+    if (sessionActive) {
+      fetch('/api/readings', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ pitch: p, roll: r }),
+      }).catch(function(){});
+    }
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   TICKER
+════════════════════════════════════════════════════════════ */
+async function loadTicker() {
+  try {
+    var res  = await fetch(_api + '/api/comments?limit=10');
+    var json = await res.json();
+    var arr  = Array.isArray(json) ? json : (json.data || []);
+    if (!arr.length) return;
+    document.getElementById('ticker').innerHTML =
+      [...arr,...arr].map(function(c){ return '<span>💬 ' + c.doctor + ': ' + c.text + '</span>'; }).join('');
+  } catch (_) {}
+}
+channel.bind('new-comment', loadTicker);
+
+/* ════════════════════════════════════════════════════════════
+   STATUS + SEED
+════════════════════════════════════════════════════════════ */
+async function checkDB() {
+  try {
+    const d = await fetch(_api + '/api/status').then(r=>r.json());
+    document.getElementById('db-badge').className = d.db?.connected ? 'badge db-ok' : 'badge err';
+  } catch (_) {}
+}
+
+  } catch (_) {}
+}
+
+/* ════════════════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════════════════ */
+loadPatients();
+loadTicker();
+checkDB();
+setInterval(checkDB, 12000);
+setSpineActive(false);
+setSensorStatus(false);
+applyPosture(0, 0, 'good');
+applyModeUI();
+// syncServerState is called on pusher connected event
+</script>
+
+<!-- Config loaded from /config.js -->
+</body>
+</html>
