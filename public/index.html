@@ -867,7 +867,7 @@ async function confirmNameEdit() {
   if (!name) { cancelNameEdit(); return; }
 
   try {
-    const res = await fetch(`/api/patients/${activePatientId}`, {
+    const res = await fetch(_api + `/api/patients/${activePatientId}`, {
       method  : 'PATCH',
       headers : { 'Content-Type':'application/json' },
       body    : JSON.stringify({ name }),
@@ -980,7 +980,7 @@ async function saveNewPatient() {
     if (age)    body.age    = parseInt(age);
     if (doctor) body.doctor = doctor;
 
-    const res  = await fetch('/api/patients', {
+    const res  = await fetch(_api + '/api/patients', {
       method  : 'POST',
       headers : { 'Content-Type': 'application/json' },
       body    : JSON.stringify(body),
@@ -1263,7 +1263,7 @@ function startClientTimer(remaining, total, startElapsed) {
 
     // Checkpoint save every 30s
     if (clientElapsed % 30 === 0 && sessionId) {
-      fetch('/api/sessions/' + sessionId, {
+      fetch(_api + '/api/sessions/' + sessionId, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: 'checkpoint' }),
@@ -1287,7 +1287,7 @@ function clearClientTimer() {
 async function completeSession(status) {
   if (!sessionId) return;
   try {
-    var res = await fetch('/api/sessions/stop', {
+    var res = await fetch(_api + '/api/sessions/stop', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({
@@ -1307,7 +1307,7 @@ async function completeSession(status) {
 
 async function startSession() {
   try {
-    var res  = await fetch('/api/sessions/start', {
+    var res  = await fetch(_api + '/api/sessions/start', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({ patientId: activePatientId, duration: chosenDuration }),
@@ -1397,7 +1397,7 @@ function sim() {
     applyPosture(p, r, Math.abs(p) > 15 ? 'bad' : 'good');
     // In sim mode post to the readings API so it also triggers Pusher
     if (sessionActive) {
-      fetch('/api/readings', {
+      fetch(_api + '/api/readings', {
         method : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body   : JSON.stringify({ pitch: p, roll: r }),

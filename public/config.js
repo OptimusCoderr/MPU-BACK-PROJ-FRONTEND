@@ -14,12 +14,12 @@ window.SG_CONFIG = {
 
   // ── Backend API URL ──────────────────────────────────────────
   // Your deployed spineguard-api Vercel URL (no trailing slash)
-  API_BASE_URL: 'https://mpu-back-proj-server.vercel.app',
+  API_BASE_URL: 'https://spineguard-api.vercel.app',
 
   // ── Pusher (real-time) ───────────────────────────────────────
   // Pusher KEY is public — safe to put here
   // Get it from https://pusher.com → your app → App Keys
-  PUSHER_KEY    : '087a189b6886a52aa2c7',
+  PUSHER_KEY    : 'your_pusher_key_here',
   PUSHER_CLUSTER: 'eu',
 
 };
