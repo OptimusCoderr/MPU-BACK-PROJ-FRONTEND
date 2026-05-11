@@ -13,7 +13,7 @@
   Example: https://spineguard-api.vercel.app
 ============================================================ -->
 <script>
-  var API = "https://mpu-back-proj-server-t2i6.vercel.app/";
+  var API = "https://YOUR-BACKEND-URL.vercel.app";
   // ^ change this to your backend URL then deploy the frontend
 </script>
 
@@ -213,6 +213,15 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .sim-row input[type=range]{flex:1;accent-color:var(--accent)}
 .sim-v{font-size:11px;font-family:var(--fm);color:var(--text);min-width:36px;text-align:right}
 
+/* NAV LINKS */
+.nav-link{font-family:var(--fm);font-size:10px;letter-spacing:.1em;padding:4px 12px;
+  border-radius:20px;border:1px solid var(--border);color:var(--muted);
+  text-decoration:none;transition:all .2s;text-transform:uppercase}
+.nav-link:hover{color:var(--accent);border-color:rgba(61,158,255,.3)}
+
+/* COMMENT CARD */
+.comment-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+
 /* DONE OVERLAY */
 .overlay{position:fixed;inset:0;background:rgba(8,9,15,.9);backdrop-filter:blur(8px);
   display:flex;align-items:center;justify-content:center;z-index:200;
@@ -236,6 +245,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 <header class="topbar">
   <div class="logo">Spine<span>Guard</span></div>
   <div class="badges">
+    <a class="nav-link" href="history.html">📋 History</a>
+    <a class="nav-link" href="api.html">⚡ API Docs</a>
     <div class="badge info" id="db-badge">Connecting</div>
     <div class="badge" id="conn-badge">Offline</div>
   </div>
@@ -375,6 +386,19 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
       <div class="ticker-lbl">Doctor Comments</div>
       <div class="ticker-inner">
         <div class="ticker-scroll" id="ticker"><span>Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- DOCTOR COMMENT PANEL -->
+    <div class="comment-card" id="comment-card">
+      <div class="card-lbl" style="margin-bottom:10px">Doctor Comment</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input class="add-inp" id="cmt-doctor" placeholder="Dr. Adeyemi" maxlength="60" value="Dr. Adeyemi">
+        <textarea class="add-inp" id="cmt-text" placeholder="Write a comment for this patient..." maxlength="300" style="min-height:70px;resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn primary" id="cmt-btn" style="font-size:12px;padding:9px 0" onclick="postComment()">Post Comment</button>
+          <div class="add-fb" id="cmt-fb" style="margin:0;flex:1"></div>
+        </div>
       </div>
     </div>
 
@@ -731,6 +755,29 @@ function showDone(d){
     '<div class="done-stat"><div class="done-stat-lbl">Good Time</div><div class="done-stat-val" style="color:var(--good)">'+fmt(d.goodSeconds)+'</div></div>'+
     '<div class="done-stat"><div class="done-stat-lbl">Duration</div><div class="done-stat-val">'+d.duration+'</div></div>';
   document.getElementById("overlay").classList.add("show");
+}
+
+/* ════════ DOCTOR COMMENT ════════ */
+async function postComment(){
+  var doctor = document.getElementById("cmt-doctor").value.trim();
+  var text   = document.getElementById("cmt-text").value.trim();
+  var fb     = document.getElementById("cmt-fb");
+  var btn    = document.getElementById("cmt-btn");
+  if(!text){fb.textContent="Please write a comment.";fb.className="add-fb err";return;}
+  if(!doctor) doctor = "Dr. Adeyemi";
+  btn.disabled=true; btn.textContent="Posting…";
+  try{
+    var d = await api("/api/comments",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({doctor:doctor,text:text,patientId:activePatientId})});
+    if(!d.error){
+      fb.textContent="✓ Comment posted!";fb.className="add-fb ok";
+      document.getElementById("cmt-text").value="";
+      loadTicker(); // refresh the ticker immediately
+      setTimeout(function(){fb.textContent="";fb.className="add-fb";},2500);
+    }else{fb.textContent=d.error||"Failed";fb.className="add-fb err";}
+  }catch(e){fb.textContent="Network error";fb.className="add-fb err";}
+  btn.disabled=false; btn.textContent="Post Comment";
 }
 
 /* ════════ STATUS ════════ */

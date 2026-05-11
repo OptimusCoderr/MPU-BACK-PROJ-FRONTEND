@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpineGuard — API Docs</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>var API="https://YOUR-BACKEND-URL.vercel.app";</script>
+<style>
+:root{--bg:#08090f;--bg2:#10121a;--bg3:#181b26;--bg4:#1e2230;
+  --border:rgba(255,255,255,.07);--border-hi:rgba(255,255,255,.14);
+  --text:#e4e8f0;--muted:#4e5668;
+  --good:#1ec98a;--bad:#f0504a;--accent:#3d9eff;--orange:#ff8c42;--purple:#a78bfa;
+  --fh:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--fh);display:flex;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(61,158,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(61,158,255,.018) 1px,transparent 1px);
+  background-size:44px 44px}
+
+/* SIDEBAR */
+.sidebar{width:220px;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;
+  background:var(--bg2);border-right:1px solid var(--border);
+  overflow-y:auto;z-index:10;padding-bottom:40px;scrollbar-width:none}
+.sidebar::-webkit-scrollbar{display:none}
+.sb-head{padding:18px 16px 14px;border-bottom:1px solid var(--border);margin-bottom:6px}
+.sb-logo{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.sb-logo span{color:var(--accent)}
+.sb-back{display:flex;align-items:center;gap:6px;margin:8px 10px;padding:6px 10px;
+  border-radius:8px;border:1px solid var(--border-hi);background:var(--bg3);
+  color:var(--muted);font-family:var(--fm);font-size:10px;text-decoration:none;
+  letter-spacing:.08em;text-transform:uppercase;transition:all .15s}
+.sb-back:hover{color:var(--accent);border-color:rgba(61,158,255,.3)}
+.sb-section{font-size:9px;font-family:var(--fm);letter-spacing:.16em;color:var(--muted);
+  text-transform:uppercase;padding:10px 16px 4px}
+.sb-item{display:flex;align-items:center;gap:7px;padding:6px 16px;
+  text-decoration:none;border-left:2px solid transparent;transition:all .15s}
+.sb-item:hover{background:rgba(255,255,255,.02)}
+.sb-item.active{border-left-color:var(--accent);background:rgba(61,158,255,.08)}
+.m-get{background:rgba(30,201,138,.12);color:var(--good);font-family:var(--fm);font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px;min-width:32px;text-align:center}
+.m-post{background:rgba(255,140,66,.12);color:var(--orange);font-family:var(--fm);font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px;min-width:32px;text-align:center}
+.m-patch{background:rgba(61,158,255,.12);color:var(--accent);font-family:var(--fm);font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px;min-width:32px;text-align:center}
+.m-del{background:rgba(240,80,74,.12);color:var(--bad);font-family:var(--fm);font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px;min-width:32px;text-align:center}
+.sb-path{font-family:var(--fm);font-size:10px;color:var(--muted)}
+.sb-item.active .sb-path{color:var(--accent)}
+
+/* MAIN */
+.main{margin-left:220px;flex:1;z-index:1;position:relative}
+.top-bar{position:sticky;top:0;background:rgba(8,9,15,.95);backdrop-filter:blur(12px);
+  z-index:5;padding:16px 40px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:16px}
+.top-bar-title{font-size:18px;font-weight:800}
+.top-bar-title span{color:var(--accent)}
+.base-url-wrap{display:flex;align-items:center;gap:8px;background:var(--bg2);
+  border:1px solid var(--border-hi);border-radius:10px;padding:7px 14px}
+.base-url-lbl{font-size:9px;font-family:var(--fm);color:var(--muted);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+#base-url{background:transparent;border:none;outline:none;font-family:var(--fm);font-size:13px;color:var(--good);width:280px}
+
+.content{padding:32px 40px 80px}
+
+/* ENDPOINT */
+.resource-title{font-size:18px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.resource-desc{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.ep{background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.ep-head{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none}
+.ep-head:hover{background:rgba(255,255,255,.02)}
+.method-badge{font-family:var(--fm);font-size:9px;font-weight:700;letter-spacing:.06em;
+  padding:4px 9px;border-radius:5px;min-width:48px;text-align:center}
+.ep-path{font-family:var(--fm);font-size:13px;color:var(--text);flex:1}
+.ep-path .p{color:var(--orange)}
+.ep-desc{font-size:11px;color:var(--muted)}
+.chev{color:var(--muted);font-size:11px;transition:transform .2s}
+.ep.open .chev{transform:rotate(180deg)}
+.ep-body{display:none;border-top:1px solid var(--border)}
+.ep.open .ep-body{display:block}
+
+/* TABS */
+.tabs{display:flex;padding:0 16px;border-bottom:1px solid var(--border)}
+.tab{font-size:10px;font-family:var(--fm);letter-spacing:.08em;padding:9px 12px;
+  color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;
+  transition:all .15s;text-transform:uppercase}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tc{padding:16px;display:none}
+.tc.active{display:block}
+
+/* CODE */
+.code-block{background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:6px 0}
+.code-head{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 12px;background:var(--bg3);border-bottom:1px solid var(--border)}
+.code-lang{font-family:var(--fm);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.copy-btn{font-family:var(--fm);font-size:9px;color:var(--muted);background:none;
+  border:1px solid var(--border);border-radius:4px;padding:2px 8px;cursor:pointer;transition:all .15s}
+.copy-btn:hover{color:var(--text);border-color:var(--border-hi)}
+.copy-btn.ok{color:var(--good);border-color:rgba(30,201,138,.3)}
+pre{padding:12px 14px;font-family:var(--fm);font-size:12px;line-height:1.7;overflow-x:auto;color:var(--text)}
+.k{color:var(--purple)}.s{color:var(--good)}.n{color:var(--orange)}.b{color:var(--accent)}.c{color:var(--muted);font-style:italic}
+
+/* FIELDS TABLE */
+.ft{width:100%;border-collapse:collapse;font-size:12px}
+.ft th{text-align:left;font-family:var(--fm);font-size:9px;letter-spacing:.12em;
+  color:var(--muted);text-transform:uppercase;padding:5px 10px;border-bottom:1px solid var(--border);font-weight:500}
+.ft td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:top}
+.ft tr:last-child td{border-bottom:none}
+.fn{font-family:var(--fm);color:var(--purple)}.ft-type{font-family:var(--fm);color:var(--orange);font-size:11px}
+.ft-req{font-family:var(--fm);color:var(--bad);font-size:10px}.ft-opt{font-family:var(--fm);color:var(--muted);font-size:10px}
+
+/* TRY IT */
+.try-it{padding:14px}
+.try-lbl{font-size:9px;font-family:var(--fm);color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.try-inp{width:100%;background:var(--bg);border:1px solid var(--border-hi);color:var(--text);
+  font-family:var(--fm);font-size:12px;padding:9px 11px;border-radius:8px;
+  outline:none;transition:border-color .2s;resize:vertical;min-height:72px}
+.try-inp:focus{border-color:var(--accent)}
+.try-row{display:flex;gap:8px;margin-bottom:10px}
+.try-field{flex:1;background:var(--bg);border:1px solid var(--border-hi);color:var(--text);
+  font-family:var(--fm);font-size:12px;padding:8px 11px;border-radius:8px;outline:none}
+.try-field:focus{border-color:var(--accent)}
+.try-field::placeholder{color:var(--muted)}
+.run-btn{padding:8px 18px;border-radius:8px;border:none;background:var(--accent);
+  color:#fff;font-family:var(--fm);font-size:10px;font-weight:600;letter-spacing:.08em;
+  cursor:pointer;transition:all .15s;text-transform:uppercase;white-space:nowrap}
+.run-btn:hover{filter:brightness(1.12)}
+.run-btn.danger{background:var(--bad)}
+.try-res{margin-top:10px;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;overflow:hidden;display:none}
+.try-res.show{display:block}
+.res-status{padding:6px 12px;font-family:var(--fm);font-size:10px;display:flex;align-items:center;gap:8px;
+  border-bottom:1px solid var(--border);background:var(--bg3)}
+.res-dot{width:6px;height:6px;border-radius:50%}
+.res-body{padding:10px 12px;font-family:var(--fm);font-size:11px;line-height:1.6;
+  color:var(--text);max-height:260px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+
+/* STATUS BAR */
+.status-bar{position:fixed;bottom:0;left:220px;right:0;z-index:10;
+  background:var(--bg2);border-top:1px solid var(--border);
+  padding:6px 40px;display:flex;align-items:center;gap:20px}
+.sb-item2{font-family:var(--fm);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.sb-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.sb-live{color:var(--good)!important}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-live .sb-dot{animation:blink 2s ease-in-out infinite}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sb-head">
+    <div class="sb-logo">Spine<span>Guard</span></div>
+  </div>
+  <a class="sb-back" href="index.html">← Dashboard</a>
+
+  <div class="sb-section">Status</div>
+  <a class="sb-item" href="#status"><span class="m-get">GET</span><span class="sb-path">/api/status</span></a>
+
+  <div class="sb-section">Readings</div>
+  <a class="sb-item" href="#r-post"><span class="m-post">POST</span><span class="sb-path">/api/readings</span></a>
+  <a class="sb-item" href="#r-latest"><span class="m-get">GET</span><span class="sb-path">/api/readings/latest</span></a>
+  <a class="sb-item" href="#r-list"><span class="m-get">GET</span><span class="sb-path">/api/readings</span></a>
+  <a class="sb-item" href="#r-delete"><span class="m-del">DEL</span><span class="sb-path">/api/readings/:id</span></a>
+
+  <div class="sb-section">Sessions</div>
+  <a class="sb-item" href="#s-start"><span class="m-post">POST</span><span class="sb-path">/sessions/start</span></a>
+  <a class="sb-item" href="#s-stop"><span class="m-post">POST</span><span class="sb-path">/sessions/stop</span></a>
+  <a class="sb-item" href="#s-active"><span class="m-get">GET</span><span class="sb-path">/sessions/active</span></a>
+  <a class="sb-item" href="#s-last"><span class="m-get">GET</span><span class="sb-path">/sessions/last</span></a>
+  <a class="sb-item" href="#s-list"><span class="m-get">GET</span><span class="sb-path">/api/sessions</span></a>
+  <a class="sb-item" href="#s-patch"><span class="m-patch">PATCH</span><span class="sb-path">/sessions/:id</span></a>
+  <a class="sb-item" href="#s-del"><span class="m-del">DEL</span><span class="sb-path">/sessions/:id</span></a>
+
+  <div class="sb-section">Patients</div>
+  <a class="sb-item" href="#p-post"><span class="m-post">POST</span><span class="sb-path">/api/patients</span></a>
+  <a class="sb-item" href="#p-list"><span class="m-get">GET</span><span class="sb-path">/api/patients</span></a>
+  <a class="sb-item" href="#p-one"><span class="m-get">GET</span><span class="sb-path">/patients/:id</span></a>
+  <a class="sb-item" href="#p-patch"><span class="m-patch">PATCH</span><span class="sb-path">/patients/:id</span></a>
+  <a class="sb-item" href="#p-del"><span class="m-del">DEL</span><span class="sb-path">/patients/:id</span></a>
+
+  <div class="sb-section">Comments</div>
+  <a class="sb-item" href="#c-post"><span class="m-post">POST</span><span class="sb-path">/api/comments</span></a>
+  <a class="sb-item" href="#c-list"><span class="m-get">GET</span><span class="sb-path">/api/comments</span></a>
+  <a class="sb-item" href="#c-patch"><span class="m-patch">PATCH</span><span class="sb-path">/comments/:id</span></a>
+  <a class="sb-item" href="#c-del"><span class="m-del">DEL</span><span class="sb-path">/comments/:id</span></a>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="top-bar">
+    <div class="top-bar-title">SpineGuard <span>API Reference</span></div>
+    <div class="base-url-wrap">
+      <span class="base-url-lbl">Base URL</span>
+      <input id="base-url" value="" placeholder="https://your-api.vercel.app">
+    </div>
+  </div>
+
+  <div class="content">
+
+  <!-- STATUS -->
+  <div style="margin-bottom:40px">
+    <div class="resource-title">🔍 Status</div>
+    <div class="resource-desc">Check if the server and database are running.</div>
+    <div class="ep" id="status">
+      <div class="ep-head" onclick="tog(this)">
+        <span class="method-badge" style="background:rgba(30,201,138,.12);color:var(--good)">GET</span>
+        <span class="ep-path">/api/status</span>
+        <span class="ep-desc">Server health check</span>
+        <span class="chev">▾</span>
+      </div>
+      <div class="ep-body">
+        <div class="tabs"><div class="tab active" onclick="swTab(this,'ex')">Example</div><div class="tab" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="ex">
+          <div class="code-block"><div class="code-head"><span class="code-lang">Response 200</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+          <pre>{ <span class="k">"message"</span>: <span class="s">"MPU SERVER RUNNING"</span>, <span class="k">"ok"</span>: <span class="b">true</span>, <span class="k">"db"</span>: <span class="s">"connected"</span>, <span class="k">"threshold"</span>: <span class="n">15</span> }</pre></div>
+        </div>
+        <div class="tc" data-t="try"><div class="try-it">
+          <button class="run-btn" onclick="run('GET','/api/status',null,this)">▶ Send</button>
+          <div class="try-res" id="tr-status"></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- READINGS -->
+  <div style="margin-bottom:40px">
+    <div class="resource-title">📡 Readings</div>
+    <div class="resource-desc">Raw MPU6050 pitch/roll data points. The ESP32 POSTs here every 100ms.</div>
+
+    <div class="ep" id="r-post">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(255,140,66,.12);color:var(--orange)">POST</span><span class="ep-path">/api/readings</span><span class="ep-desc">Submit sensor reading (single or batch)</span><span class="chev">▾</span></div>
+      <div class="ep-body">
+        <div class="tabs"><div class="tab active" onclick="swTab(this,'fields')">Fields</div><div class="tab" onclick="swTab(this,'ex')">Example</div><div class="tab" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="fields">
+          <table class="ft"><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          <tr><td class="fn">pitch</td><td class="ft-type">number</td><td class="ft-req">Yes</td><td>Forward/back tilt in degrees. &gt;15° triggers slouch.</td></tr>
+          <tr><td class="fn">roll</td><td class="ft-type">number</td><td class="ft-req">Yes</td><td>Side-to-side tilt in degrees.</td></tr>
+          <tr><td class="fn">readings</td><td class="ft-type">array</td><td class="ft-opt">No</td><td>Array of {pitch,roll} for batch insert. Use instead of single fields.</td></tr>
+          </table>
+        </div>
+        <div class="tc" data-t="ex">
+          <div class="code-block"><div class="code-head"><span class="code-lang">Single</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+          <pre>{ <span class="k">"pitch"</span>: <span class="n">12.4</span>, <span class="k">"roll"</span>: <span class="n">-3.1</span> }</pre></div>
+          <div class="code-block"><div class="code-head"><span class="code-lang">Batch</span><button class="copy-btn" onclick="cp(this)">Copy</button></div>
+          <pre>{ <span class="k">"readings"</span>: [ { <span class="k">"pitch"</span>: <span class="n">5.2</span>, <span class="k">"roll"</span>: <span class="n">1.0</span> }, { <span class="k">"pitch"</span>: <span class="n">18.7</span>, <span class="k">"roll"</span>: <span class="n">0.5</span> } ] }</pre></div>
+        </div>
+        <div class="tc" data-t="try"><div class="try-it">
+          <div class="try-lbl">Body (JSON)</div>
+          <textarea class="try-inp" id="b-r-post">{ "pitch": 12.4, "roll": -3.1 }</textarea>
+          <div style="margin-top:8px"><button class="run-btn" onclick="run('POST','/api/readings','b-r-post',this)">▶ Send</button></div>
+          <div class="try-res" id="tr-r-post"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="r-latest">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(30,201,138,.12);color:var(--good)">GET</span><span class="ep-path">/api/readings/latest</span><span class="ep-desc">Most recent sensor reading</span><span class="chev">▾</span></div>
+      <div class="ep-body">
+        <div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <button class="run-btn" onclick="run('GET','/api/readings/latest',null,this)">▶ Send</button>
+          <div class="try-res" id="tr-r-latest"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="r-list">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(30,201,138,.12);color:var(--good)">GET</span><span class="ep-path">/api/readings<span class="p">?limit=100</span></span><span class="ep-desc">List readings</span><span class="chev">▾</span></div>
+      <div class="ep-body">
+        <div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-lbl">Query string (optional)</div>
+          <div class="try-row"><input class="try-field" id="qs-r-list" placeholder="limit=10" value="limit=10"><button class="run-btn" onclick="runQS('GET','/api/readings','qs-r-list',this)">▶ Send</button></div>
+          <div class="try-res" id="tr-r-list"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="r-delete">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(240,80,74,.12);color:var(--bad)">DEL</span><span class="ep-path">/api/readings/<span class="p">:id</span></span><span class="ep-desc">Delete a reading</span><span class="chev">▾</span></div>
+      <div class="ep-body">
+        <div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-lbl">Reading ID</div>
+          <div class="try-row"><input class="try-field" id="id-r-del" placeholder="MongoDB _id"><button class="run-btn danger" onclick="runId('DELETE','/api/readings/','id-r-del',null,this)">▶ Delete</button></div>
+          <div class="try-res" id="tr-r-del"></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSIONS -->
+  <div style="margin-bottom:40px">
+    <div class="resource-title">⏱ Sessions</div>
+    <div class="resource-desc">A session is one posture monitoring run. Start → timer counts down in browser → stop saves to MongoDB.</div>
+
+    <div class="ep" id="s-start">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(255,140,66,.12);color:var(--orange)">POST</span><span class="ep-path">/api/sessions/start</span><span class="ep-desc">Start a new session</span><span class="chev">▾</span></div>
+      <div class="ep-body">
+        <div class="tabs"><div class="tab active" onclick="swTab(this,'fields')">Fields</div><div class="tab" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="fields">
+          <table class="ft"><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+          <tr><td class="fn">duration</td><td class="ft-type">number</td><td class="ft-opt">No</td><td>Seconds (10–3600). Default: 2700 (45 min)</td></tr>
+          <tr><td class="fn">patientId</td><td class="ft-type">string</td><td class="ft-opt">No</td><td>Patient ID. Default: User1</td></tr>
+          <tr><td class="fn">notes</td><td class="ft-type">string</td><td class="ft-opt">No</td><td>Session notes</td></tr>
+          </table>
+        </div>
+        <div class="tc" data-t="try"><div class="try-it">
+          <div class="try-lbl">Body</div>
+          <textarea class="try-inp" id="b-s-start">{ "patientId": "User1", "duration": 30 }</textarea>
+          <div style="margin-top:8px"><button class="run-btn" onclick="run('POST','/api/sessions/start','b-s-start',this)">▶ Start Session</button></div>
+          <div class="try-res" id="tr-s-start"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="s-stop">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(255,140,66,.12);color:var(--orange)">POST</span><span class="ep-path">/api/sessions/stop</span><span class="ep-desc">Stop active session with final stats</span><span class="chev">▾</span></div>
+      <div class="ep-body">
+        <div class="tabs"><div class="tab active" onclick="swTab(this,'fields')">Fields</div><div class="tab" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="fields">
+          <table class="ft"><tr><th>Field</th><th>Type</th><th>Description</th></tr>
+          <tr><td class="fn">elapsed</td><td class="ft-type">number</td><td>Total seconds elapsed</td></tr>
+          <tr><td class="fn">goodSeconds</td><td class="ft-type">number</td><td>Seconds with good posture</td></tr>
+          <tr><td class="fn">badSeconds</td><td class="ft-type">number</td><td>Seconds slouching</td></tr>
+          <tr><td class="fn">slouchCount</td><td class="ft-type">number</td><td>Number of slouch events</td></tr>
+          <tr><td class="fn">status</td><td class="ft-type">string</td><td>Completed or Manual Stop</td></tr>
+          </table>
+        </div>
+        <div class="tc" data-t="try"><div class="try-it">
+          <div class="try-lbl">Body</div>
+          <textarea class="try-inp" id="b-s-stop">{ "elapsed": 30, "goodSeconds": 22, "badSeconds": 8, "slouchCount": 2, "status": "Completed" }</textarea>
+          <div style="margin-top:8px"><button class="run-btn" onclick="run('POST','/api/sessions/stop','b-s-stop',this)">▶ Stop Session</button></div>
+          <div class="try-res" id="tr-s-stop"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="s-active">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(30,201,138,.12);color:var(--good)">GET</span><span class="ep-path">/api/sessions/active</span><span class="ep-desc">Currently running session (or null)</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it"><button class="run-btn" onclick="run('GET','/api/sessions/active',null,this)">▶ Send</button><div class="try-res" id="tr-s-active"></div></div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="s-last">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(30,201,138,.12);color:var(--good)">GET</span><span class="ep-path">/api/sessions/last</span><span class="ep-desc">Most recent session</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it"><button class="run-btn" onclick="run('GET','/api/sessions/last',null,this)">▶ Send</button><div class="try-res" id="tr-s-last"></div></div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="s-list">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(30,201,138,.12);color:var(--good)">GET</span><span class="ep-path">/api/sessions<span class="p">?limit=20&status=Completed</span></span><span class="ep-desc">List all sessions</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-row"><input class="try-field" id="qs-s-list" placeholder="limit=5&status=Completed" value="limit=5"><button class="run-btn" onclick="runQS('GET','/api/sessions','qs-s-list',this)">▶ Send</button></div>
+          <div class="try-res" id="tr-s-list"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="s-patch">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(61,158,255,.12);color:var(--accent)">PATCH</span><span class="ep-path">/api/sessions/<span class="p">:id</span></span><span class="ep-desc">Update notes or status</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-row"><input class="try-field" id="id-s-patch" placeholder="Session _id"></div>
+          <div class="try-lbl">Body</div>
+          <textarea class="try-inp" id="b-s-patch">{ "notes": "Patient did well today" }</textarea>
+          <div style="margin-top:8px"><button class="run-btn" onclick="runId('PATCH','/api/sessions/','id-s-patch','b-s-patch',this)">▶ Send</button></div>
+          <div class="try-res" id="tr-s-patch"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="s-del">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(240,80,74,.12);color:var(--bad)">DEL</span><span class="ep-path">/api/sessions/<span class="p">:id</span></span><span class="ep-desc">Delete session + cascade readings</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-row"><input class="try-field" id="id-s-del" placeholder="Session _id"><button class="run-btn danger" onclick="runId('DELETE','/api/sessions/','id-s-del',null,this)">▶ Delete</button></div>
+          <div class="try-res" id="tr-s-del"></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PATIENTS -->
+  <div style="margin-bottom:40px">
+    <div class="resource-title">🧑‍⚕️ Patients</div>
+    <div class="resource-desc">Patient records. patientId (not MongoDB _id) is the key used everywhere.</div>
+
+    <div class="ep" id="p-post">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(255,140,66,.12);color:var(--orange)">POST</span><span class="ep-path">/api/patients</span><span class="ep-desc">Create a patient</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-lbl">Body</div>
+          <textarea class="try-inp" id="b-p-post">{ "name": "Tunde Okafor", "patientId": "PT099", "age": 34, "doctor": "Dr. Adeyemi" }</textarea>
+          <div style="margin-top:8px"><button class="run-btn" onclick="run('POST','/api/patients','b-p-post',this)">▶ Create</button></div>
+          <div class="try-res" id="tr-p-post"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="p-list">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(30,201,138,.12);color:var(--good)">GET</span><span class="ep-path">/api/patients</span><span class="ep-desc">List all patients</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it"><button class="run-btn" onclick="run('GET','/api/patients',null,this)">▶ Send</button><div class="try-res" id="tr-p-list"></div></div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="p-one">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(30,201,138,.12);color:var(--good)">GET</span><span class="ep-path">/api/patients/<span class="p">:patientId</span></span><span class="ep-desc">Get one patient</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-row"><input class="try-field" id="id-p-one" placeholder="patientId e.g. User1" value="User1"><button class="run-btn" onclick="runId('GET','/api/patients/','id-p-one',null,this)">▶ Send</button></div>
+          <div class="try-res" id="tr-p-one"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="p-patch">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(61,158,255,.12);color:var(--accent)">PATCH</span><span class="ep-path">/api/patients/<span class="p">:patientId</span></span><span class="ep-desc">Update patient details</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-row"><input class="try-field" id="id-p-patch" placeholder="patientId" value="User1"></div>
+          <div class="try-lbl">Body (allowed: name, age, email, phone, doctor, notes)</div>
+          <textarea class="try-inp" id="b-p-patch">{ "notes": "Follow-up in April 2026" }</textarea>
+          <div style="margin-top:8px"><button class="run-btn" onclick="runId('PATCH','/api/patients/','id-p-patch','b-p-patch',this)">▶ Send</button></div>
+          <div class="try-res" id="tr-p-patch"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="p-del">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(240,80,74,.12);color:var(--bad)">DEL</span><span class="ep-path">/api/patients/<span class="p">:patientId</span></span><span class="ep-desc">Delete patient record</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-row"><input class="try-field" id="id-p-del" placeholder="patientId e.g. PT099"><button class="run-btn danger" onclick="runId('DELETE','/api/patients/','id-p-del',null,this)">▶ Delete</button></div>
+          <div class="try-res" id="tr-p-del"></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMMENTS -->
+  <div style="margin-bottom:80px">
+    <div class="resource-title">💬 Comments</div>
+    <div class="resource-desc">Doctor notes shown in the dashboard ticker.</div>
+
+    <div class="ep" id="c-post">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(255,140,66,.12);color:var(--orange)">POST</span><span class="ep-path">/api/comments</span><span class="ep-desc">Add a doctor comment</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-lbl">Body</div>
+          <textarea class="try-inp" id="b-c-post">{ "doctor": "Dr. Adeyemi", "text": "Great posture improvement this week!", "patientId": "User1" }</textarea>
+          <div style="margin-top:8px"><button class="run-btn" onclick="run('POST','/api/comments','b-c-post',this)">▶ Post Comment</button></div>
+          <div class="try-res" id="tr-c-post"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="c-list">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(30,201,138,.12);color:var(--good)">GET</span><span class="ep-path">/api/comments<span class="p">?patientId=User1</span></span><span class="ep-desc">List comments</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-row"><input class="try-field" id="qs-c-list" placeholder="patientId=User1" value="patientId=User1"><button class="run-btn" onclick="runQS('GET','/api/comments','qs-c-list',this)">▶ Send</button></div>
+          <div class="try-res" id="tr-c-list"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="c-patch">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(61,158,255,.12);color:var(--accent)">PATCH</span><span class="ep-path">/api/comments/<span class="p">:id</span></span><span class="ep-desc">Edit a comment</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-row"><input class="try-field" id="id-c-patch" placeholder="Comment MongoDB _id"></div>
+          <div class="try-lbl">Body</div>
+          <textarea class="try-inp" id="b-c-patch">{ "text": "Updated: outstanding progress this month." }</textarea>
+          <div style="margin-top:8px"><button class="run-btn" onclick="runId('PATCH','/api/comments/','id-c-patch','b-c-patch',this)">▶ Send</button></div>
+          <div class="try-res" id="tr-c-patch"></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="ep" id="c-del">
+      <div class="ep-head" onclick="tog(this)"><span class="method-badge" style="background:rgba(240,80,74,.12);color:var(--bad)">DEL</span><span class="ep-path">/api/comments/<span class="p">:id</span></span><span class="ep-desc">Delete a comment</span><span class="chev">▾</span></div>
+      <div class="ep-body"><div class="tabs"><div class="tab active" onclick="swTab(this,'try')">Try It</div></div>
+        <div class="tc active" data-t="try"><div class="try-it">
+          <div class="try-row"><input class="try-field" id="id-c-del" placeholder="Comment MongoDB _id"><button class="run-btn danger" onclick="runId('DELETE','/api/comments/','id-c-del',null,this)">▶ Delete</button></div>
+          <div class="try-res" id="tr-c-del"></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="sb-item2 sb-live"><span class="sb-dot"></span><span id="sb-server">Checking...</span></div>
+  <div class="sb-item2" id="sb-db">DB: —</div>
+</div>
+
+<script>
+function getBase(){var v=document.getElementById("base-url").value.trim();return v.replace(/\/$/,"");}
+function tog(h){h.parentElement.classList.toggle("open");}
+function swTab(tab,name){
+  var body=tab.closest(".ep-body");
+  body.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+  body.querySelectorAll(".tc").forEach(function(c){c.classList.remove("active");});
+  tab.classList.add("active");
+  body.querySelector("[data-t='"+name+"']").classList.add("active");
+}
+function cp(btn){
+  var pre=btn.closest(".code-block").querySelector("pre");
+  navigator.clipboard.writeText(pre.innerText||pre.textContent).then(function(){
+    btn.textContent="Copied!";btn.classList.add("ok");
+    setTimeout(function(){btn.textContent="Copy";btn.classList.remove("ok");},1500);
+  });
+}
+function showRes(el,status,body,ms){
+  el.classList.add("show");
+  var ok=status>=200&&status<300;
+  var pretty;try{pretty=JSON.stringify(JSON.parse(body),null,2);}catch(e){pretty=body;}
+  el.innerHTML='<div class="res-status"><span class="res-dot" style="background:'+(ok?"var(--good)":"var(--bad)")+'"></span>'+
+    '<span style="color:'+(ok?"var(--good)":"var(--bad)")+';font-weight:600">'+(status||"ERR")+'</span>'+
+    (ms?'<span style="color:var(--muted)">'+ms+'ms</span>':'')+
+    '</div><div class="res-body">'+esc(pretty)+'</div>';
+}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+async function run(method,path,bodyId,btn){
+  var url=getBase()+path;
+  var res=btn.closest(".try-it").querySelector(".try-res");
+  await fire(method,url,bodyId,res,btn);
+}
+async function runQS(method,path,qsId,btn){
+  var qs=document.getElementById(qsId).value.trim();
+  var url=getBase()+path+(qs?"?"+qs:"");
+  var res=btn.closest(".try-it").querySelector(".try-res");
+  await fire(method,url,null,res,btn);
+}
+async function runId(method,prefix,idId,bodyId,btn){
+  var id=document.getElementById(idId).value.trim();
+  if(!id){alert("Please enter an ID.");return;}
+  var url=getBase()+prefix+encodeURIComponent(id);
+  var res=btn.closest(".try-it").querySelector(".try-res");
+  await fire(method,url,bodyId,res,btn);
+}
+async function fire(method,url,bodyId,resEl,btn){
+  var orig=btn.textContent;btn.disabled=true;btn.textContent="...";
+  var opts={method:method,headers:{}};
+  if(bodyId){
+    var raw=document.getElementById(bodyId).value;
+    try{JSON.parse(raw);}catch(e){showRes(resEl,0,"Invalid JSON: "+e.message);btn.disabled=false;btn.textContent=orig;return;}
+    opts.headers["Content-Type"]="application/json";opts.body=raw;
+  }
+  try{
+    var t=Date.now();
+    var r=await fetch(url,opts);
+    var ms=Date.now()-t;
+    var text=await r.text();
+    showRes(resEl,r.status,text,ms);
+  }catch(e){showRes(resEl,0,"Network error: "+e.message+"\n\nIs your API URL set correctly?");}
+  btn.disabled=false;btn.textContent=orig;
+}
+
+// Status bar poll
+async function pollStatus(){
+  var base=getBase();
+  if(!base||base.includes("YOUR-BACKEND")){
+    document.getElementById("sb-server").textContent="Set your backend URL above";return;
+  }
+  try{
+    var d=await fetch(base+"/api/status").then(function(r){return r.json();});
+    document.getElementById("sb-server").textContent=d.message||"Running";
+    document.getElementById("sb-db").textContent="DB: "+(d.db||"unknown");
+  }catch(e){document.getElementById("sb-server").textContent="Offline";}
+}
+
+// Pre-fill base URL from the global API variable
+document.getElementById("base-url").value=API.replace(/\/$/,"");
+document.getElementById("base-url").addEventListener("change",pollStatus);
+
+pollStatus();setInterval(pollStatus,8000);
+
+// Open first endpoint
+document.getElementById("status").classList.add("open");
+</script>
+</body>
+</html>
